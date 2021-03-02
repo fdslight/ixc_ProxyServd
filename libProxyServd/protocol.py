@@ -11,6 +11,11 @@ type:1 byte 数据帧类型
     3：TCP数据包
     4：UDP数据包
 
+    16:创建TCP请求
+    17:创建TCP请求响应
+    18:删除TCP请求
+    19:删除TCP请求响应
+
 payload_length:2 bytes 数据长度
 user_id:16bytes 用户ID
 session_id:4bytes 由客户端随机生成
@@ -24,11 +29,11 @@ type 3 格式：
 type 4 格式：
     err_code:4bytes 0表示未发生故障，1表示连接失败
 
-type 5格式：
+type 3格式：
     window_size:2bytes 窗口大小
     TCP DATA
 
-type 6格式:
+type 4格式:
     addr_type:addr_type:1 byte 4表示IPv4，6表示IPv6
     pad:1 byte 填充字节
     port:2 bytes 目标端口
