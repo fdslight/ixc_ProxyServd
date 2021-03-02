@@ -22,7 +22,7 @@ session_id:4bytes 由客户端随机生成
 
 type 17 格式：
     addr_type:1 byte 4表示IPv4，6表示IPv6
-    pad:1byte 填充字节
+    addr_len:1byte 填充字节
     port：2bytes 目标端口
     address:ipv4为4个字节,ipv6为16个字节
 
@@ -35,13 +35,13 @@ type 3格式：
 
 type 4格式:
     addr_type:addr_type:1 byte 4表示IPv4，6表示IPv6
-    pad:1 byte 填充字节
+    addr_len:1 byte 填充字节
     port:2 bytes 目标端口
     addr:4 or 16bytes
     udp data
 """
 
-import struct
+import struct, socket
 import pywind.lib.reader as reader
 
 TYPE_PING = 1
@@ -56,19 +56,52 @@ TYPE_TCP_DEL_REQ = 19
 TYPE_TCP_DEL_RESP = 20
 
 
+class ProtocolErr(Exception): pass
+
+
 class parser(object):
     __reader = None
     __header_ok = None
-
     __type = None
     __payload_len = None
     __session_id = None
 
     __results = None
+    __request_info = None
+
+    def __parse_addr_header(self):
+        if self.__reader.size() < 4: return None
+        byte_data = self.__reader.read(4)
+        addr_type, addr_len, port = struct.unpack("!BBH", byte_data)
+
+        if addr_type not in (4, 6,): raise ProtocolErr("Wrong address type")
+
+        if addr_type == 4 and self.__reader.size() < 4:
+            self.__reader.push(byte_data)
+        if addr_type == 6 and self.__reader.size() < 16:
+            self.__reader.push(byte_data)
+
+        if addr_type == 4 and addr_len != 4:
+            raise ProtocolErr("wrong address length for IPv4")
+        if addr_type == 6 and addr_len != 16:
+            raise ProtocolErr("wrong address length for IPv6")
+        address = self.__reader.read(addr_len)
+        if addr_type == 4:
+            fa = socket.AF_INET
+        else:
+            fa = socket.AF_INET6
+        s_addr = socket.inet_ntop(fa, address)
+
+        self.__payload_len = self.__payload_len - addr_len - 4
+        if self.__payload_len != 0:
+            raise ProtocolErr("Wrong payload length for UDP and TCP connection request")
+
+        return addr_type, s_addr, port
 
     def __init__(self):
         self.__reader = reader.reader()
         self.__header_ok = False
+        self.__addr_header_ok = False
         self.__results = []
 
     def __parse_header(self):
@@ -83,7 +116,19 @@ class parser(object):
 
     def __parse_body(self):
         if self.__reader.size() < self.__payload_len: return
+        if self.__type in (4, 17,):
+            self.__request_info = self.__parse_addr_header()
+            if not self.__request_info: return
+        if self.__reader.size() < self.__payload_len: return
         byte_data = self.__reader.read(self.__payload_len)
+
+        if self.__type in (4, 17,):
+            info = self.__request_info
+        else:
+            info = byte_data
+        self.__results.append(
+            (self.__type, info,)
+        )
         self.__header_ok = False
 
     def parse(self, byte_data: bytes):
