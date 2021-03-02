@@ -8,10 +8,9 @@ type:1 byte 数据帧类型
     0：空数据包
     1：ping请求
     2：pong响应
-    3：ctl 控制帧，用于创建连接请求，删除请求等操作
-    4：TCP连接请求
-    5：TCP数据包
-    6：UDP数据包
+    3：TCP数据包
+    4：UDP数据包
+
 payload_length:2 bytes 数据长度
 user_id:16bytes 用户ID
 session_id:4bytes 由客户端随机生成
