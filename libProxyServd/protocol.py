@@ -13,6 +13,7 @@ type:1 byte 数据帧类型
     5：TCP数据包
     6：UDP数据包
 payload_length:2 bytes 数据长度
+user_id:16bytes 用户ID
 session_id:4bytes 由客户端随机生成
 
 type 3 格式：
