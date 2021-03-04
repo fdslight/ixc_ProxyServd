@@ -58,13 +58,19 @@ class proxy_handler(tcp_handler.tcp_handler):
     __http_auth_id = None
     __http_ws_key = None
 
+    __builder = None
+    __parser = None
+
     def init_func(self, creator, cs, caddr):
         self.__address = caddr
         self.__update_time = time.time()
         self.__session_id = None
 
         self.__http_handshake_ok = False
-        cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+        self.__builder = protocol.builder()
+        self.__parser = protocol.parser()
+
         self.set_socket(cs)
         self.set_timeout(self.fileno, self.__LOOP_TIMEOUT)
 
@@ -78,6 +84,14 @@ class proxy_handler(tcp_handler.tcp_handler):
             self.do_http_handshake()
             return
         rdata = self.reader.read()
+        while 1:
+            try:
+                self.__parser.parse(rdata)
+            except protocol.ProtocolErr:
+                self.delete_handler(self.fileno)
+                break
+            result = self.__parser.get_result()
+            if not result: break
 
     def tcp_writable(self):
         if self.writer.size() == 0: self.remove_evt_write(self.fileno)

@@ -8,21 +8,11 @@ if not BASE_DIR: BASE_DIR = "."
 
 sys.path.append(BASE_DIR)
 
+import pywind.evtframework.evt_dispatcher as dispatcher
 import libProxyServd.proc as proc
 import libProxyServd.handlers.proxyd as proxy
 
 PID_PATH = "/tmp/ixc_ProxyServd.pid"
-
-
-class proxyd(object):
-    def __init__(self, debug=False):
-        self.__debug = debug
-
-    def load_configs(self):
-        pass
-
-    def release(self):
-        pass
 
 
 def stop():
@@ -30,6 +20,35 @@ def stop():
     if pid < 0: return
     os.remove(PID_PATH)
     os.kill(pid, signal.SIGINT)
+
+
+class proxyd(dispatcher.dispatcher):
+    __debug = None
+    # sessions的结构如下
+    __sessions = None
+
+    def init_func(self, debug=True):
+        self.__debug = debug
+        self.__sessions = {}
+
+    def msg_queue_append(self, user_id: bytes, byte_data: bytes):
+        """向消息队列添加内容
+        :param user_id:
+        :param byte_data:
+        :return:
+        """
+        if user_id not in self.__sessions: return False
+
+        context = self.__sessions[user_id]
+
+    def msg_queue_pop(self, user_id: bytes):
+        pass
+
+    def myloop(self):
+        pass
+
+    def release(self):
+        pass
 
 
 def main():
@@ -51,12 +70,6 @@ def main():
         stop()
         return
 
-    try:
-        opts, args = getopt.getopt(sys.argv[2:], "", ["port=", "bind_ip="])
-    except getopt.GetoptError:
-        print(help_doc)
-        return
-
     debug = True
     if action == "start":
         debug = False
@@ -70,9 +83,9 @@ def main():
         if pid != 0: sys.exit(0)
         proc.write_pid(PID_PATH)
 
-    cls = proxyd(debug=debug)
+    cls = proxyd()
     try:
-        cls.monitor()
+        cls.ioloop(debug=debug)
     except KeyboardInterrupt:
         cls.release()
 
