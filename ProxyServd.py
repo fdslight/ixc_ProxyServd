@@ -11,6 +11,7 @@ sys.path.append(BASE_DIR)
 import pywind.evtframework.evt_dispatcher as dispatcher
 import libProxyServd.proc as proc
 import libProxyServd.handlers.proxyd as proxy
+import libProxyServd.session as session
 
 PID_PATH = "/tmp/ixc_ProxyServd.pid"
 
@@ -27,22 +28,57 @@ class proxyd(dispatcher.dispatcher):
     # sessions的结构如下
     __sessions = None
 
+    __auth = None
+
     def init_func(self, debug=True):
         self.__debug = debug
         self.__sessions = {}
+        self.__auth = session.auth_base()
 
-    def msg_queue_append(self, user_id: bytes, byte_data: bytes):
-        """向消息队列添加内容
+        self.create_poll()
+
+    def session_create(self, user_id: bytes, fd: int):
+        if user_id in self.__sessions: return False
+
+        context = session.context(user_id, fd)
+        self.__sessions[user_id] = context
+
+        return True
+
+    def session_exists(self, user_id: bytes):
+        """检查会话是否存在
         :param user_id:
-        :param byte_data:
         :return:
         """
-        if user_id not in self.__sessions: return False
+        return user_id in self.__sessions
 
+    def session_modify_fd(self, user_id: bytes, fd: int):
+        """修改user_id地址到fd映射
+        :param user_id:
+        :param fd:
+        :return:
+        """
+        if not self.session_exists(user_id): return False
         context = self.__sessions[user_id]
+        context.set_fd(fd)
+        return True
 
-    def msg_queue_pop(self, user_id: bytes):
-        pass
+    def session_delete(self, user_id: bytes):
+        if not self.session_exists(user_id): return
+
+        del self.__sessions[user_id]
+
+    def send_msg(self, user_id: bytes, msg: bytes):
+        context = self.__sessions[user_id]
+        fd = context.fileno
+        context.msg_queue_append(msg)
+        if fd < 0: return
+        new_msg = context.msg_queue_pop()
+        self.get_handler(context.fileno).send_msg(new_msg)
+
+    @property
+    def auth(self):
+        return self.__auth
 
     def myloop(self):
         pass

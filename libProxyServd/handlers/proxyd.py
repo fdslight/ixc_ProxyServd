@@ -51,8 +51,6 @@ class proxy_handler(tcp_handler.tcp_handler):
 
     __LOOP_TIMEOUT = 5
 
-    __session_id = None
-
     __over_http = None
     __http_handshake_ok = None
     __http_auth_id = None
@@ -61,10 +59,11 @@ class proxy_handler(tcp_handler.tcp_handler):
     __builder = None
     __parser = None
 
+    __user_id = None
+
     def init_func(self, creator, cs, caddr):
         self.__address = caddr
         self.__update_time = time.time()
-        self.__session_id = None
 
         self.__http_handshake_ok = False
 
@@ -92,6 +91,35 @@ class proxy_handler(tcp_handler.tcp_handler):
                 break
             result = self.__parser.get_result()
             if not result: break
+            _type, user_id, session_id, info = result
+
+            if user_id != self.__user_id: break
+
+            if _type == protocol.TYPE_PING:
+                self.handle_ping()
+                continue
+            if _type == protocol.TYPE_PONG:
+                self.handle_pong()
+                continue
+            if _type == protocol.TYPE_TCP_CONN_REQ:
+                self.handle_tcp_conn_req(session_id, *info)
+                continue
+
+    def handle_ping(self):
+        byte_data = self.__builder.build_pong(self.__user_id, 0)
+        self.dispatcher.send_msg(self.__user_id, byte_data)
+
+    def handle_pong(self):
+        pass
+
+    def handle_tcp_conn_req(self, session_id: int, addr_type: int, ipaddr: str, port: int):
+        pass
+
+    def handle_tcp_conn_del_req(self, session_id: int):
+        pass
+
+    def handle_tcp_conn_del_resp(self, session_id: int):
+        pass
 
     def tcp_writable(self):
         if self.writer.size() == 0: self.remove_evt_write(self.fileno)
@@ -111,11 +139,13 @@ class proxy_handler(tcp_handler.tcp_handler):
         self.unregister(self.fileno)
         self.close()
 
-    def send_msg(self, session_id, address, action, message):
-        # 检查session_id是否一致
-        if session_id != self.__session_id: return
-        if not self.__http_handshake_ok: return
+    @property
+    def auth(self):
+        return self.dispatcher.auth
+
+    def send_msg(self, msg: bytes):
         self.add_evt_write(self.fileno)
+        self.writer.write(msg)
 
     def do_http_handshake(self):
         size = self.reader.size()
@@ -159,6 +189,20 @@ class proxy_handler(tcp_handler.tcp_handler):
             self.response_http_error("400 Bad Request")
             return
 
+        user_id = self.get_http_kv_value("x-user-id", kv_pairs)
+        if not user_id:
+            self.response_http_error("403 Forbidden")
+            return
+
+        if not self.auth.do_auth(user_id):
+            self.response_http_error("403 Forbidden")
+            return
+
+        if not self.dispatcher.session_exists(self.fileno):
+            self.dispatcher.session_modify_fd(self.__user_id, self.fileno)
+        else:
+            self.dispatcher.session_create(self.__user_id, self.fileno)
+
         self.__http_handshake_ok = True
         self.response_http_ok()
 
@@ -188,7 +232,3 @@ class proxy_handler(tcp_handler.tcp_handler):
                 return v
             ''''''
         return None
-
-    @property
-    def session_id(self):
-        return self.__session_id

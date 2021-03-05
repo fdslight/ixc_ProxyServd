@@ -24,9 +24,9 @@ class auth_base(object):
     def do_auth(self, user_id: bytes):
         """执行验证,重写这个方法
         :param user_id:
-        :return:
+        :return Boolean: True表示验证成功,False表示验证失败
         """
-        pass
+        return True
 
     def recv_from_client(self, user_id: bytes, data_len: int):
         """重写这个方法
@@ -86,3 +86,7 @@ class context(object):
         :return:
         """
         self.__msg_queue.insert(0, byte_data)
+
+    @property
+    def fileno(self):
+        return self.__fd
