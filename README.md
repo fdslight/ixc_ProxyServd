@@ -1,2 +1,1 @@
-# ixc_ProxyServd
-Proxy Server for ixc_ProxyApp
+IP代理软件服务端for ixcsys
