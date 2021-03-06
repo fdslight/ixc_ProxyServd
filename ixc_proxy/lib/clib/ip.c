@@ -6,9 +6,8 @@
 #include "ip.h"
 #include "ipv6.h"
 #include "ipunfrag.h"
-#include "ip2socks.h"
+#include "proxy.h"
 #include "udp.h"
-#include "tcp.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"

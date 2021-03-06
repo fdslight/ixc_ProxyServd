@@ -6,6 +6,9 @@ struct ipalloc_record{
     unsigned char address[16];
 };
 
+// IP空闲池的数量
+#define IPALLOC_FREE_NUM 128
+
 struct ipalloc{
     // 空的IPv6地址列表
     struct ipalloc_record *empty_ip6_head;
@@ -24,6 +27,7 @@ struct ipalloc{
     int isset_ip_subnet;
     // 是否已经设置了IPv6子网
     int isset_ip6_subnet;
+    int free_record_num;
 };
 
 int ipalloc_init(void);

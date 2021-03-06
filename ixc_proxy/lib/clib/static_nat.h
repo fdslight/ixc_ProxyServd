@@ -1,13 +1,22 @@
 #ifndef STATIC_NAT_H
 #define STATIC_NAT_H
 
+#include<sys/types.h>
+
 #include "mbuf.h"
+#include "ipalloc.h"
 
 #include "../../../pywind/clib/map.h"
+#include "../../../pywind/clib/timer.h"
+
+#define STATIC_NAT_TIMEOUT 900
 
 struct static_nat_record{
-    unsigned char lan_addr[16];
-    unsigned char wan_addr[16];
+    struct time_data *tdata;
+    struct ipalloc_record *ip_record;
+    unsigned char lan_addr1[16];
+    unsigned char lan_addr2[16];
+    time_t up_time;
     // 引用次数
     unsigned int refcnt;
     int is_ipv6;
