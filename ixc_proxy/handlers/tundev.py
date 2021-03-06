@@ -2,8 +2,7 @@
 
 import os, sys
 import pywind.evtframework.handlers.handler as handler
-import ixc_proxy.lib.fn_utils as fn_utils
-import ixc_proxy.lib.simple_qos as simple_qos
+from ixc_proxy import lib as fn_utils, lib as simple_qos
 
 try:
     import fcntl

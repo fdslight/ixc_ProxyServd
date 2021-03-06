@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import pywind.lib.timer as timer
-import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.logging as logging
+from ixc_proxy import lib as proto_utils, lib as logging
 
 
 class access(object):

@@ -14,17 +14,12 @@ ERR_FILE = "/tmp/fdslight_error.log"
 import pywind.evtframework.evt_dispatcher as dispatcher
 import pywind.lib.configfile as configfile
 
-import ixc_proxy.lib.proc as proc
+from ixc_proxy import lib as proc, lib as utils, lib as proto_utils, lib as nat, lib as ip6dgram, lib as logging, \
+    lib as fn_utils
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
-import ixc_proxy.lib.utils as utils
-import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.nat as nat
 import ixc_proxy.handlers.tunnels as tunnels
-import ixc_proxy.lib.ip6dgram as ip6dgram
 import ixc_proxy.handlers.traffic_pass as traffic_pass
-import ixc_proxy.lib.logging as logging
-import ixc_proxy.lib.fn_utils as fn_utils
 
 
 class _fdslight_server(dispatcher.dispatcher):

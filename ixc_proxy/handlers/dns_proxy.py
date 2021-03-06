@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pywind.evtframework.handlers.udp_handler as udp_handler
 import pywind.lib.timer as timer
-import socket, random, sys
+import socket, sys
 
 try:
     import dns.message
@@ -9,12 +9,8 @@ except ImportError:
     print("please install dnspython3 module")
     sys.exit(-1)
 
-import ixc_proxy.lib.utils as utils
-import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.ippkts as ippkts
-import ixc_proxy.lib.host_match as host_match
-import ixc_proxy.lib.ip_match as ip_match
-import ixc_proxy.lib.logging as logging
+from ixc_proxy import lib as utils, lib as proto_utils, lib as ippkts, lib as host_match, lib as ip_match, \
+    lib as logging
 
 
 class dns_base(udp_handler.udp_handler):

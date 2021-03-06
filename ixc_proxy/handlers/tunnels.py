@@ -6,8 +6,7 @@ import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.web.lib.httputils as httputils
 import pywind.web.lib.websocket as wslib
 
-import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.logging as logging
+from ixc_proxy import lib as proto_utils, lib as logging
 
 
 class tcp_tunnel(tcp_handler.tcp_handler):

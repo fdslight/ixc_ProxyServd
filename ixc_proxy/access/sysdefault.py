@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import ixc_proxy.access._access as _access
-import ixc_proxy.lib.utils as utils
-import os, json, socket
+import os, json
 
 
 class access(_access.access):
