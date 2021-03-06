@@ -23,7 +23,4 @@ void static_nat_uninit(void);
 
 void static_nat_handle(struct mbuf *m);
 
-/// 设置静态NAT的IP子网
-void static_nat_ip_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6);
-
 #endif

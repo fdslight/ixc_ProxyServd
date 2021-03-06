@@ -7,9 +7,9 @@ if not BASE_DIR: BASE_DIR = "."
 
 sys.path.append(BASE_DIR)
 
-PID_FILE = "/tmp/fdslight.pid"
-LOG_FILE = "/tmp/fdslight.log"
-ERR_FILE = "/tmp/fdslight_error.log"
+PID_FILE = "/tmp/ixc_proxy.pid"
+LOG_FILE = "/tmp/ixc_proxy.log"
+ERR_FILE = "/tmp/ixc_proxy_error.log"
 
 import pywind.evtframework.evt_dispatcher as dispatcher
 import pywind.lib.configfile as configfile
@@ -19,7 +19,6 @@ from ixc_proxy import lib as proc, lib as utils, lib as proto_utils, lib as nat,
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
-import ixc_proxy.handlers.traffic_pass as traffic_pass
 
 
 class _fdslight_server(dispatcher.dispatcher):
@@ -28,9 +27,6 @@ class _fdslight_server(dispatcher.dispatcher):
 
     __access = None
     __mbuf = None
-
-    __nat4 = None
-    __nat6 = None
 
     __udp6_fileno = -1
     __tcp6_fileno = -1
@@ -44,31 +40,16 @@ class _fdslight_server(dispatcher.dispatcher):
     __udp_crypto = None
 
     __crypto_configs = None
-
-    __support_ip4_protocols = (1, 6, 17, 132, 136,)
-    __support_ip6_protocols = (6, 17, 44, 58, 132, 136,)
-
     __tundev_fileno = -1
 
-    __DEVNAME = "fdslight"
+    __DEVNAME = "ixcsys"
 
     # 是否开启NAT66
     __enable_nat6 = False
-
-    __IP6_ROUTER_TIMEOUT = 900
-
     __ip6_dgram = None
 
     __dgram_proxy = None
     __ip4_fragment = None
-
-    __raw_fileno = None
-
-    __ip6_udp_cone_nat = False
-
-    __ip4_mtu = None
-    __ip6_mtu = None
-
     __dns_is_ipv6 = None
     __dns_addr = None
 
@@ -639,7 +620,7 @@ def __update_user_configs():
     pid = proc.get_pid(PID_FILE)
 
     if pid < 0:
-        print("cannot found fdslight server process")
+        print("cannot found ixcsys process")
         return
 
     os.kill(pid, signal.SIGUSR1)
@@ -648,11 +629,10 @@ def __update_user_configs():
 def main():
     help_doc = """
     -d      debug | start | stop    debug,start or stop application
-    --enable_nat_module             enable kernel cone nat module
     -u      user_configs            update configs           
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", ["enable_nat_module"])
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", [])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -664,7 +644,6 @@ def main():
     for k, v in opts:
         if k == "-d": d = v
         if k == "-u": u = v
-        if k == "--enable_nat_module": enable_nat_module = True
 
     if not u and not d:
         print(help_doc)

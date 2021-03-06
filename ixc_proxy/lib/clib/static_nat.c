@@ -47,8 +47,3 @@ void static_nat_handle(struct mbuf *m)
     if(m->is_ipv6) static_nat_handle_v6(m);
     else static_nat_handle_v4(m);
 }
-
-void static_nat_ip_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
-{
-
-}
