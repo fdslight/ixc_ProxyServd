@@ -70,7 +70,7 @@ int netpkt_send(struct mbuf *m)
     return 0;
 }
 
-int netpkt_udp_recv(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsigned short dport,int is_udplite,int is_ipv6,void *data,int size)
+int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsigned short dport,int is_udplite,int is_ipv6,void *data,int size)
 {
     PyObject *arglist,*result;
     char src_addr[512],dst_addr[512];
@@ -89,7 +89,7 @@ int netpkt_udp_recv(unsigned char *saddr,unsigned char *daddr,unsigned short spo
     inet_ntop(fa,saddr,src_addr,512);
     inet_ntop(fa,daddr,dst_addr,512);
 
-    arglist=Py_BuildValue("(ssHHNNy#)",src_addr,dst_addr,sport,dport,PyBool_FromLong(is_udplite),PyBool_FromLong(is_ipv6),data,size);
+    arglist=Py_BuildValue("(y#ssHHNNy#)",id,16,src_addr,dst_addr,sport,dport,PyBool_FromLong(is_udplite),PyBool_FromLong(is_ipv6),data,size);
     result=PyObject_CallObject(udp_recv_cb,arglist);
  
     Py_XDECREF(arglist);

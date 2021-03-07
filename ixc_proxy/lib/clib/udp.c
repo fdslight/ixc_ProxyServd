@@ -34,7 +34,7 @@ static void __udp_handle_v4(struct mbuf *m)
     sport=ntohs(udphdr->src_port);
     dport=ntohs(udphdr->dst_port);
 
-    netpkt_udp_recv(saddr,daddr,sport,dport,is_udplite,0,m->data+m->offset+8,m->tail-m->offset-8);
+    netpkt_udp_recv(m->id,saddr,daddr,sport,dport,is_udplite,0,m->data+m->offset+8,m->tail-m->offset-8);
     mbuf_put(m);
 }
 
@@ -58,7 +58,7 @@ static void __udp_handle_v6(struct mbuf *m)
     sport=ntohs(udphdr->src_port);
     dport=ntohs(udphdr->dst_port);
 
-    netpkt_udp_recv(saddr,daddr,sport,dport,is_udplite,1,m->data+m->offset+8,m->tail-m->offset-8);
+    netpkt_udp_recv(m->id,saddr,daddr,sport,dport,is_udplite,1,m->data+m->offset+8,m->tail-m->offset-8);
     
     mbuf_put(m);
 }

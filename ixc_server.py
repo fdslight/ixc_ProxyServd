@@ -51,6 +51,8 @@ class proxyd(dispatcher.dispatcher):
 
     __proxy = None
 
+    __udp_conns = None
+
     @property
     def http_configs(self):
         configs = self.__configs.get("tunnel_over_http", {})
@@ -75,9 +77,20 @@ class proxyd(dispatcher.dispatcher):
             return
         self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
 
-    def udp_recv_cb(self, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool, is_ipv6: bool,
+    def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
+                    is_ipv6: bool,
                     byte_data: bytes):
-        pass
+        if _id not in self.__udp_conns:
+            self.__udp_conns[_id] = {}
+        o = self.__udp_conns[_id]
+
+        if is_udplite:
+            udp_id = "%s-%s-136" % (src_addr, sport,)
+        else:
+            udp_id = "%s-%s-17" % (src_addr, sport)
+
+        if udp_id not in o:
+            pass
 
     def init_func(self, debug, configs):
         self.create_poll()
@@ -85,6 +98,7 @@ class proxyd(dispatcher.dispatcher):
         self.__configs = configs
         self.__debug = debug
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
+        self.__udp_conns = {}
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
