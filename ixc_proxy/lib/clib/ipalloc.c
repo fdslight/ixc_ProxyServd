@@ -39,6 +39,8 @@ int ipalloc_init(void)
 {
     bzero(&ipalloc,sizeof(struct ipalloc));
     ipalloc_is_initialized=1;
+
+    return 0;
 }
 
 void ipalloc_uninit(void)
@@ -124,7 +126,6 @@ void ipalloc_free(struct ipalloc_record *record,int is_ipv6)
 int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
 {
     unsigned char mask[16];
-    unsigned char v;
 
     if(is_ipv6 && ipalloc.isset_ip6_subnet){
         STDERR("there have set IPv6 subnet\r\n");
@@ -150,4 +151,5 @@ int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
         ipalloc.isset_ip_subnet=1;
     }
 
+    return 0;
 }

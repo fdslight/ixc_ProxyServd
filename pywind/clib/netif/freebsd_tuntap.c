@@ -13,6 +13,7 @@
 #include<stdlib.h>
 #include<sys/stat.h>
 #include<sys/ioctl.h>
+#include<fcntl.h>
 
 #include "tuntap.h"
 #include "../debug.h"
@@ -27,6 +28,7 @@ static int __tuntap_create(char *tuntap_name,int is_tap)
     char *name, buf[256];
     char sysctl_name[512];
 
+    // FreeBSD可能会无法创建tap设备,需要预先加载 if_tap.ko 内核模块
     if(is_tap) strcpy(sysctl_name,"net.link.tap.devfs_cloning");
     else strcpy(sysctl_name,"net.link.tun.devfs_cloning");
     
@@ -89,6 +91,14 @@ int tundev_up(const char *name){
     return 0;
 }
 
+int tundev_set_nonblocking(int fd)
+{
+    int flags;
+
+    flags=fcntl(fd,F_GETFL,0);
+    return fcntl(fd,F_SETFL,flags | O_NONBLOCK);
+}
+
 int tapdev_create(char *tap_name)
 {
     return __tuntap_create(tap_name,1);
@@ -102,4 +112,10 @@ void tapdev_close(int fd,const char *name)
 int tapdev_up(const char *name)
 {
     return 0;
+}
+
+int tapdev_set_nonblocking(int fd)
+{
+    int v=1;
+    return ioctl(fd,FIONBIO,&v);
 }

@@ -1,37 +1,52 @@
 #!/usr/bin/env python3
-import os
-import sys
-import shutil
+import os, sys
+
 import pywind.lib.sys_build as sys_build
 
 
-def __build_fn_utils(cflags):
-    sys_build.do_compile(
-        ["ixc_proxy/lib/fn_utils.c"], "ixc_proxy/lib/fn_utils.so", cflags, debug=True, is_shared=True
-    )
-
-
 def build(cflags):
-    __build_fn_utils(cflags)
+    files = sys_build.get_c_files("ixc_proxy/lib/clib")
+    files += sys_build.get_c_files("pywind/clib")
+
+    files+=[
+        "pywind/clib/netif/linux_tuntap.c"
+    ]
+
+    sys_build.do_compile(files, "ixc_proxy/lib/proxy.so", cflags, is_shared=True)
 
 
 def main():
     help_doc = """
-    python3_include_path
+    python3_include_path  [debug]
     """
 
     argv = sys.argv[1:]
-    if len(argv) != 2:
+    if len(argv) < 1:
         print(help_doc)
         return
 
-    mode = argv[0]
-
-    if not os.path.isdir(argv[1]):
-        print("not found directory %s" % argv[1])
+    if len(argv) > 2:
+        print(help_doc)
         return
 
-    cflags = " -I %s" % "".join(argv[1:])
+    if not os.path.isdir(argv[0]):
+        print("not found directory %s" % argv[0])
+        return
+
+    debug = False
+
+    if len(argv) == 2:
+        if argv[1] != "debug":
+            print(help_doc)
+            return
+        debug = True
+
+    if debug:
+        cflags = " -I %s -DDEBUG -g -Wall" % argv[0]
+    else:
+        cflags = " -I %s -O2" % argv[0]
+
+    build(cflags)
 
 
 if __name__ == '__main__':

@@ -1,10 +1,11 @@
 #include<string.h>
+#include<arpa/inet.h>
 
 #include "ipv6.h"
 #include "ip6unfrag.h"
-#include "tcp.h"
 #include "udp.h"
-#include "ip2socks.h"
+#include "proxy.h"
+#include "static_nat.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -15,6 +16,13 @@ void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
 
+    if(m->tail-m->offset<41){
+        mbuf_put(m);
+        return;
+    }
+
+    m->is_ipv6=1;
+
     m=ip6unfrag_add(m);
     if(NULL==m) return;
 
@@ -22,9 +30,11 @@ void ipv6_handle(struct mbuf *m)
 
     switch(header->next_header){
         case 6:
-            tcp_handle(m,1);
+        case 58:
+            static_nat_handle(m);
             break;
         case 17:
+        case 136:
             udp_handle(m,1);
             break;
         default:
@@ -127,7 +137,7 @@ int ipv6_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char prot
 
         header->payload_len=htons(data_size);
 
-        netpkt_send(m,protocol,1);
+        netpkt_send(m);
     }
 
     return rs;

@@ -5,17 +5,24 @@
 #include<structmember.h>
 #include<execinfo.h>
 #include<signal.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
 
 #include "mbuf.h"
-#include "debug.h
+#include "debug.h"
 #include "ip.h"
 #include "ipv6.h"
 #include "proxy.h"
 #include "udp.h"
 #include "ipunfrag.h"
 #include "ip6unfrag.h"
+#include "static_nat.h"
+#include "ipalloc.h"
 
 #include "../../../pywind/clib/sysloop.h"
+#include "../../../pywind/clib/netif/tuntap.h"
 
 typedef struct{
     PyObject_HEAD
@@ -43,7 +50,7 @@ static void ixc_segfault_handle(int signum)
     exit(EXIT_FAILURE);
 }
 
-int netpkt_send(struct mbuf *m,unsigned char protocol,int is_ipv6)
+int netpkt_send(struct mbuf *m)
 {
     PyObject *arglist,*result;
 
@@ -52,7 +59,7 @@ int netpkt_send(struct mbuf *m,unsigned char protocol,int is_ipv6)
         return -1;
     }
 
-    arglist=Py_BuildValue("(iy#)",protocol,m->data+m->begin,m->end-m->begin);
+    arglist=Py_BuildValue("(y#i)",m->data+m->begin,m->end-m->begin,m->from);
     result=PyObject_CallObject(ip_sent_cb,arglist);
  
     Py_XDECREF(arglist);
@@ -114,6 +121,18 @@ proxy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     rs=sysloop_init();
     if(rs<0){
         STDERR("cannot init sysloop\r\n");
+        return NULL;
+    }
+
+    rs=ipalloc_init();
+    if(rs<0){
+        STDERR("cannot init ipalloc\r\n");
+        return NULL;
+    }
+
+    rs=static_nat_init();
+    if(rs<0){
+        STDERR("cannot init static nat\r\n");
         return NULL;
     }
 
@@ -194,9 +213,10 @@ proxy_netpkt_handle(PyObject *self,PyObject *args)
     const char *s;
     Py_ssize_t size;
     struct mbuf *m;
+    int from;
 
-    if(!PyArg_ParseTuple(args,"y#",&s,&size)) return NULL;
-    if(size<28){
+    if(!PyArg_ParseTuple(args,"y#i",&s,&size,&from)) return NULL;
+    if(size<21){
         STDERR("wrong IP data format\r\n");
         Py_RETURN_FALSE;
     }
@@ -209,6 +229,8 @@ proxy_netpkt_handle(PyObject *self,PyObject *args)
 
     m->begin=m->offset=MBUF_BEGIN;
     m->end=m->tail=m->begin+size;
+
+    m->from=from;
 
     memcpy(m->data+m->offset,s,size);
     ip_handle(m);
@@ -242,10 +264,41 @@ proxy_udp_send(PyObject *self,PyObject *args)
     Py_RETURN_NONE;
 }
 
+/// 打开tun设备
 static PyObject *
-proxy_io_wait(PyObject *self,PyObject *args)
+proxy_tun_open(PyObject *self,PyObject *args)
 {
-    Py_RETURN_TRUE;
+    const char *name;
+    char new_name[512];
+    int fd;
+
+    if(!PyArg_ParseTuple(args,"s",&name)) return NULL;
+    
+    strcpy(new_name,name);
+
+    fd=tundev_create(new_name);
+    if(fd<0){
+        return PyLong_FromLong(fd);
+    }
+
+    tundev_up(name);
+    tundev_set_nonblocking(fd);
+
+    return PyLong_FromLong(fd);
+}
+
+/// 关闭tun设备
+static PyObject *
+proxy_tun_close(PyObject *self,PyObject *args)
+{
+    const char *name;
+    int fd;
+
+    if(!PyArg_ParseTuple(args,"is",&fd,&name)) return NULL;
+
+    tundev_close(fd,name);
+
+    Py_RETURN_NONE;
 }
 
 static PyMemberDef proxy_members[]={
@@ -259,12 +312,14 @@ static PyMethodDef proxy_methods[]={
     {"netpkt_handle",(PyCFunction)proxy_netpkt_handle,METH_VARARGS,"handle ip data packet"},
 
     {"udp_send",(PyCFunction)proxy_udp_send,METH_VARARGS,"udp data send"},
-    {"io_wait",(PyCFunction)proxy_io_wait,METH_VARARGS,"if wait connection IO"},
+
+    {"tun_open",(PyCFunction)proxy_tun_open,METH_VARARGS,"open tun device"},
+    {"tun_close",(PyCFunction)proxy_tun_close,METH_VARARGS,"close tun device"},
     
     {NULL,NULL,0,NULL}
 };
 
-static PyTypeObject ip2socks_type={
+static PyTypeObject proxy_type={
     PyVarObject_HEAD_INIT(NULL,0)
     .tp_name="proxy.proxy",
     .tp_doc="python proxy helper library",
@@ -278,7 +333,7 @@ static PyTypeObject ip2socks_type={
     .tp_methods=proxy_methods
 };
 
-static struct PyModuleDef ip2socks_module={
+static struct PyModuleDef proxy_module={
     PyModuleDef_HEAD_INIT,
     "proxy",
     NULL,
@@ -290,9 +345,13 @@ PyMODINIT_FUNC
 PyInit_proxy(void){
     PyObject *m;
     const char *const_names[] = {
+        "FROM_LAN",
+        "FROM_WAN"
 	};
 
 	const int const_values[] = {
+        MBUF_FROM_LAN,
+        MBUF_FROM_WAN
 	};
     
     int const_count = sizeof(const_names) / sizeof(NULL);

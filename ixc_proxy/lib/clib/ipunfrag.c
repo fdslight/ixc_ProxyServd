@@ -1,5 +1,6 @@
 #include<string.h>
 #include<stdlib.h>
+#include<arpa/inet.h>
 
 #include "ipunfrag.h"
 #include "mbuf.h"

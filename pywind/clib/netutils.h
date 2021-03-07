@@ -1,7 +1,7 @@
-#include<sys/types.h>
-
 #ifndef __NETUTILS_H
 #define __NETUTILS_H
+#include<sys/types.h>
+#include<arpa/inet.h>
 
 struct netutil_iphdr{
     unsigned char ver_and_ihl;
@@ -16,6 +16,14 @@ struct netutil_iphdr{
     unsigned char dst_addr[4];
 };
 
+struct netutil_ip_ps_header{
+    unsigned char src_addr[4];
+    unsigned char dst_addr[4];
+    unsigned char pad[1];
+    unsigned char protocol;
+    unsigned short length;
+};
+
 struct netutil_ip6hdr{
     unsigned char ver_and_tc;
     unsigned char flow_label[3];
@@ -24,6 +32,23 @@ struct netutil_ip6hdr{
     unsigned char hop_limit;
     unsigned char src_addr[16];
     unsigned char dst_addr[16];
+};
+
+/// IPv6伪首部
+struct netutil_ip6_ps_header{
+    unsigned char src_addr[16];
+    unsigned char dst_addr[16];
+    unsigned int length;
+    unsigned char pad[3];
+    unsigned char next_header;
+};
+
+/// IPv6分片头部
+struct netutil_ip6_frag_header{
+    unsigned char next_header;
+    unsigned char reserved;
+    unsigned short frag_off;
+    unsigned int id;
 };
 
 struct netutil_udphdr{
@@ -49,7 +74,7 @@ struct netutil_tcphdr{
 };
 
 #pragma pack(push)
-#pragma pack(4)
+#pragma pack(1)
 struct netutil_icmphdr{
     unsigned char type;
     unsigned char code;
@@ -62,7 +87,32 @@ struct netutil_icmpecho{
     unsigned short seq_num;
 };
 
+struct netutil_icmpv6hdr{
+    unsigned char type;
+    unsigned char code;
+    unsigned short checksum;
+};
+
+struct netutil_icmpv6echo{
+    struct netutil_icmpv6hdr icmpv6hdr;
+    unsigned short id;
+    unsigned short seq_num;
+};
+
 #pragma pack(pop)
+
+#define IPv6_HEADER_SET(ip6_header,traffic_cls,flw_label,payload_length,next_hdr,hop,src_ipaddr,dst_ipaddr) \
+ip6_header->ver_and_tc= 0x60 | (traffic_cls & 0xf0 >>4);\
+ip6_header->flow_label[0]=(traffic_cls & 0x0f) << 4;\
+ip6_header->flow_label[0]=ip6_header->flow_label[0] | ((flw_label & 0x0f0000) >> 16);\
+ip6_header->flow_label[1]= (flw_label & 0x00ff00) >> 8;\
+ip6_header->flow_label[2]= flw_label & 0x0000ff;\
+ip6_header->payload_len=htons(payload_length);\
+ip6_header->next_header=next_hdr;\
+ip6_header->hop_limit=hop;\
+memcpy(ip6_header->src_addr,src_ipaddr,16);\
+memcpy(ip6_header->dst_addr,dst_ipaddr,16)
+
 
 /// 计算掩码
 int msk_calc(unsigned char prefix,int is_ipv6,unsigned char *res);
@@ -72,10 +122,8 @@ int subnet_calc_with_msk(unsigned char *address,unsigned char *msk,int is_ipv6,u
 
 /** calc inrement csum **/
 unsigned short csum_calc_incre(unsigned short old_field,unsigned short new_field,unsigned short old_csum);
-unsigned short csum_calc(char *buffer,size_t size);
+unsigned short csum_calc(unsigned short *buffer,size_t size);
 
-/// 计算广播地址
-int net_broadcast_calc(unsigned char *address,unsigned char prefix,int is_ipv6,unsigned char *res);
 
 /// 构建IPv4数据包头部
 // 如果opt_len长度为0表示选项结束
@@ -100,5 +148,7 @@ int check_ippkt_is_ok(struct netutil_iphdr *iphdr);
 
 /// 重写IP地址,is_src不为0表示重写源地址,否则重写目标地址
 void rewrite_ip_addr(struct netutil_iphdr *iphdr,unsigned char *new_addr,int is_src);
+/// 重写IPv6地址
+void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hr,unsigned char new_addr,int is_src);
 
 #endif

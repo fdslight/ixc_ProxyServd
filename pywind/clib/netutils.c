@@ -6,6 +6,28 @@
 
 #include "netutils.h"
 
+/// 增加SSE2指令支持
+#ifdef __x86_64__
+#include<emmintrin.h>
+/// 使用SSE2指令集优化IPv6子网计算
+static inline
+int subnet_calc_with_msk_for_ipv6(unsigned char *address,unsigned char *msk,unsigned char *res)
+{
+	__m128i *mem_addr=(__m128i *)res;
+	__m128i *xa=(__m128i *)address;
+	__m128i *xb=(__m128i *)msk;
+
+    __m128i a=_mm_loadu_si128(xa);
+    __m128i b=_mm_loadu_si128(xb);
+
+    a=_mm_and_si128(a,b);
+
+    _mm_storeu_si128(mem_addr,a);
+
+    return 0;
+}
+#endif
+
 int msk_calc(unsigned char prefix,int is_ipv6,unsigned char *res)
 {
     unsigned char a,b,constant=0xff;
@@ -45,8 +67,13 @@ int subnet_calc_with_msk(unsigned char *address,unsigned char *msk,int is_ipv6,u
 {
     size_t size=4;
 
-    if(is_ipv6) size=16;
-
+    if(is_ipv6){
+#ifdef __x86_64__
+        return subnet_calc_with_msk_for_ipv6(address,msk,res);
+#else
+        size=16;
+#endif
+    }
     for(size_t n=0;n<size;n++){
         res[n]= address[n] & msk[n];
     }
@@ -61,54 +88,21 @@ unsigned short csum_calc_incre(unsigned short old_field,unsigned short new_field
     return csum;
 }
 
-unsigned short csum_calc(char *buffer,size_t size)
+unsigned short csum_calc(unsigned short *buffer,size_t size)
 {
     unsigned long sum;
     
     sum = 0;
+
     while (size > 1) {
-            sum += *buffer++;
-            size -= 2;
+        sum += *buffer++;
+        size -= 2;
     }
-
-    /*  Add left-over byte, if any */
-    if (size)
-            sum += *(unsigned char *)buffer;
-
-    /*  Fold 32-bit sum to 16 bits */
-    while (sum >> 16)
-            sum  = (sum & 0xffff) + (sum >> 16);
+    
+    if (size) sum += *(unsigned char *)buffer;
+    while (sum >> 16) sum  = (sum & 0xffff) + (sum >> 16);
 
     return (unsigned short)(~sum);
-}
-
-int net_broadcast_calc(unsigned char *address,unsigned char prefix,int is_ipv6,unsigned char *res)
-{
-    unsigned char subnet[16],tmp[16];
-    unsigned char msk[16],ch;
-    int size=4;
-
-    if(subnet_calc_with_prefix(address,prefix,is_ipv6,subnet)<0) return -1;
-    msk_calc(prefix,is_ipv6,msk);
-
-    if(is_ipv6) size=16;
-
-    for(int n=0;n<size;n++){
-        ch=(unsigned char )((~subnet[n]) & 0xff);
-        subnet[n]=ch;
-
-        ch=(unsigned char )((~msk[n]) & 0xff);
-        msk[n]=ch;
-    }
-
-    subnet_calc_with_msk(subnet,msk,is_ipv6,tmp);
-
-    for(int n=0;n<size;n++){
-        ch= (unsigned char)((tmp[n] | address[n]) & 0xff);
-        res[n]=ch;    
-    }
-
-    return 0;
 }
 
 
@@ -139,7 +133,7 @@ int build_ipv4_header(struct netutil_iphdr *iphdr,const char options[][40],unsig
     if(header_len>60) return -1;
     t->ver_and_ihl|=(header_len & 0xff); 
 
-    csum=csum_calc((char *)res,header_len);
+    csum=csum_calc((unsigned short *)res,header_len);
     t->checksum=htons(csum);
 
     return 0;
@@ -154,7 +148,7 @@ int is_udplite,int udplite_csum_coverage)
 
     unsigned char protocol=is_udplite?136:17;
     unsigned short csum=0,length;
-    char *s=NULL;
+    unsigned char *s=NULL;
     int size=0;
 
     struct pseudo_header{
@@ -200,7 +194,7 @@ int is_udplite,int udplite_csum_coverage)
         header6.protocol=protocol;
         header6.length=length;
 
-        s=(char *)(&header6);
+        s=(unsigned char *)(&header6);
         size=sizeof(struct pseudo_header6);
     }else {
         memcpy(header.src_addr,src_addr,4);
@@ -210,7 +204,7 @@ int is_udplite,int udplite_csum_coverage)
         header.protocol=protocol;
         header.length=length;
 
-        s=(char *)(&header);
+        s=(unsigned char *)(&header);
         size=sizeof(struct pseudo_header);
     }
 
@@ -228,7 +222,7 @@ int is_udplite,int udplite_csum_coverage)
     if(is_udplite){
         csum=0;
     }else{
-        csum=csum_calc(s,size+8+user_data_len);
+        csum=csum_calc((unsigned short *)s,size+8+user_data_len);
         udphdr->checksum=htons(csum);
     }
 
@@ -281,6 +275,7 @@ void rewrite_ip_addr(struct netutil_iphdr *iphdr,unsigned char *new_addr,int is_
     unsigned short csum=iphdr->checksum;
     unsigned short *u16_addr=(unsigned short *)addr;
     unsigned short *u16_new_addr=(unsigned short *)new_addr;
+    unsigned short offset;
     int hdr_len=((iphdr->ver_and_ihl) & 0x0f) * 4;
     struct netutil_udphdr *udphdr;
     struct netutil_tcphdr *tcphdr;
@@ -289,6 +284,10 @@ void rewrite_ip_addr(struct netutil_iphdr *iphdr,unsigned char *new_addr,int is_
     for(int n=0;n<2;n++) csum=csum_calc_incre(*u16_addr++,*u16_new_addr++,csum);
     
     iphdr->checksum=csum;
+    
+    // 只修改第一个分片的TCP以及UDP
+    offset=htons(iphdr->frag_info) & 0x1fff;
+    if(offset!=0) goto __NETUTIL_COPY_ADDR;
 
     // 重置指针位置
     u16_addr=(unsigned short *)addr;
@@ -309,4 +308,13 @@ void rewrite_ip_addr(struct netutil_iphdr *iphdr,unsigned char *new_addr,int is_
             udphdr->checksum=csum;
             break;
     }
+
+__NETUTIL_COPY_ADDR:
+    if(is_src) memcpy(iphdr->src_addr,new_addr,4);
+    else memcpy(iphdr->dst_addr,new_addr,4);
+}
+
+void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hr,unsigned char new_addr,int is_src)
+{
+    
 }

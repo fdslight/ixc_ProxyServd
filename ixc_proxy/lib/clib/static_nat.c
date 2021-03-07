@@ -3,6 +3,8 @@
 
 #include "debug.h"
 #include "static_nat.h"
+#include "udp.h"
+#include "proxy.h"
 
 #include "../../../pywind/clib/netutils.h"
 
@@ -10,28 +12,75 @@ static struct static_nat static_nat;
 static int static_nat_is_initialized=0;
 static struct time_wheel static_nat_time_wheel;
 
-
 /// 重写IPv6地址
 static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *new_addr,int is_src)
 {
     unsigned char old_addr[16];
     unsigned char *csum_ptr;
+    unsigned short csum;
+    unsigned char *ptr=(unsigned char *)(header);
+    unsigned short *old_u16addr,*new_u16addr=(unsigned short *)new_addr;
 
-    if(is_src) memcpy(old_addr,header->src_addr,16);
-    else memcpy(old_addr,header->dst_addr,16);
+    int flags=1;
 
+    if(is_src) {
+        memcpy(old_addr,header->src_addr,16);
+        memcpy(header->src_addr,new_addr,16);
+
+        old_u16addr=(unsigned short *)(header->src_addr);
+    }else{
+        memcpy(old_addr,header->dst_addr,16);
+        memcpy(header->dst_addr,new_addr,16);
+
+        old_u16addr=(unsigned short *)(header->dst_addr);
+    }
+
+    switch(header->next_header){
+        case 6:
+            csum_ptr=ptr+46;
+            break;
+        case 17:
+            csum_ptr=ptr+56;
+            break;
+        case 58:
+            csum_ptr=ptr+2;
+            break;
+        default:
+            flags=0;
+            break;
+    }
+
+    // 不需要重写传输层校验和直接跳过
+    if(!flags) return;
+    csum=*((unsigned short *)(csum_ptr));
+
+    for(int n=0;n<16;n++){
+        csum=csum_calc_incre(*old_u16addr,*new_u16addr++,csum);
+    }
+
+    *((unsigned short *)(csum_ptr))=csum;
 }
 
 /// 发送到下一个IPv4节点处理
 static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *header)
 {
+    if(header->protocol==17 || header->protocol==136){
+        udp_handle(m,0);
+        return;
+    }
 
+    netpkt_send(m);
 }
 
 /// 发送到下一个IPv6节点处理
 static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *header)
 {
+    if(header->next_header==17 || header->next_header==136){
+        udp_handle(m,1);
+        return;
+    }
 
+    netpkt_send(m);
 }
 
 
@@ -62,14 +111,14 @@ static void static_nat_handle_v4(struct mbuf *m)
 
     if(m->from==MBUF_FROM_WAN){
         r->up_time=time(NULL);
-        rewrite_ip_addr(header,r->lan_addr2,is_src);
+        rewrite_ip_addr(header,r->lan_addr1,is_src);
 
         static_nat_send_next_for_v4(m,header);
         return;
     }
 
     if(r){
-        rewrite_ip_addr(header,r->lan_addr1,is_src);
+        rewrite_ip_addr(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v4(m,header);
         return;
     }
@@ -127,7 +176,7 @@ static void static_nat_handle_v4(struct mbuf *m)
     r->tdata=tdata;
 
     memcpy(r->lan_addr1,header->src_addr,4);
-    memcmp(r->lan_addr2,ip_record->address,4);
+    memcpy(r->lan_addr2,ip_record->address,4);
 
     rewrite_ip_addr(header,r->lan_addr2,is_src);
 
@@ -138,7 +187,6 @@ static void static_nat_handle_v4(struct mbuf *m)
 static void static_nat_handle_v6(struct mbuf *m)
 {
     struct netutil_ip6hdr *header=(struct netutil_ip6hdr *)(m->data+m->offset);
-    struct netutil_iphdr *header=(struct netutil_iphdr *)(m->data+m->offset);
     struct static_nat_record *r;
     struct ipalloc_record *ip_record;
     struct time_data *tdata;
@@ -163,13 +211,14 @@ static void static_nat_handle_v6(struct mbuf *m)
 
     if(m->from==MBUF_FROM_WAN){
         r->up_time=time(NULL);
-        static_nat_rewrite_ip6(header,ip_record->address,is_src);
+        ip_record=r->ip_record;
+        static_nat_rewrite_ip6(header,r->lan_addr1,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
     }
 
     if(r){
-        static_nat_rewrite_ip6(header,ip_record->address,is_src);
+        static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
     }
@@ -225,18 +274,57 @@ static void static_nat_handle_v6(struct mbuf *m)
     r->up_time=time(NULL);
     r->refcnt=2;
     r->tdata=tdata;
+    r->is_ipv6=1;
 
-    memcpy(r->lan_addr1,header->src_addr,4);
-    memcmp(r->lan_addr2,ip_record->address,4);
+    memcpy(r->lan_addr1,header->src_addr,16);
+    memcpy(r->lan_addr2,ip_record->address,16);
 
     static_nat_rewrite_ip6(header,ip_record->address,is_src);
 
     static_nat_send_next_for_v6(m,header);
 }
 
+static void static_nat_del_cb(void *data)
+{
+    struct static_nat_record *r=data;
+    struct time_data *tdata=r->tdata;
+
+    if(NULL!=tdata) tdata->is_deleted=1;
+    r->refcnt-=1;
+
+    if(0==r->refcnt){
+        ipalloc_free(r->ip_record,r->is_ipv6);
+        free(r);
+        return;
+    }
+}
+
 static void static_nat_timeout_cb(void *data)
 {
+    struct static_nat_record *r=data;
+    struct time_data *tdata=r->tdata;
+    time_t now=time(NULL);
 
+    struct map *m=r->is_ipv6?static_nat.natv6:static_nat.natv4;
+
+    // 如果超时那么直接删除数据
+    if(now-r->up_time<STATIC_NAT_TIMEOUT){
+        tdata=time_wheel_add(&static_nat_time_wheel,data,10);
+        if(NULL==tdata){
+            STDERR("cannot add to time wheel\r\n");
+            map_del(m,(char *)r->lan_addr1,static_nat_del_cb);
+            map_del(m,(char *)r->lan_addr2,static_nat_del_cb);
+            return;
+        }
+
+        r->tdata=tdata;
+        return;
+    }
+
+    DBG_FLAGS;
+
+    map_del(m,(char *)r->lan_addr1,static_nat_del_cb);
+    map_del(m,(char *)r->lan_addr2,static_nat_del_cb);
 }
 
 int static_nat_init(void)

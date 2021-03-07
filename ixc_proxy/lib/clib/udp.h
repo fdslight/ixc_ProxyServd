@@ -1,5 +1,5 @@
-#ifndef IP2SOCKS_UDP_H
-#define IP2SOCKS_UDP_H
+#ifndef UDP_H
+#define UDP_H
 
 #include "mbuf.h"
 

@@ -9,7 +9,7 @@
 #include "ip.h"
 #include "ipv6.h"
 
-#include "ip2socks.h"
+#include "proxy.h"
 
 #include "../../../pywind/clib/netutils.h"
 

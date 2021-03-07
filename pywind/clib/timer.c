@@ -22,6 +22,8 @@ static struct time_data *time_data_get(struct time_wheel *time_wheel)
         tdata->next=NULL;
     }
 
+    tdata->is_deleted=0;
+
     return tdata;
 }
 
@@ -40,12 +42,15 @@ static void time_data_put(struct time_wheel *time_wheel,struct time_data *data)
     time_wheel->empty_data_head=data;
 }
 
-static void time_wheel_timeout(struct time_wheel *time_wheel,struct time_data *first,int is_deleted)
+static void time_wheel_timeout(struct time_wheel *time_wheel,struct time_data *first)
 {
     struct time_data *tdata=first,*t;
 
+    //DBG_FLAGS;
     while(NULL!=tdata){
-        if(!tdata->is_deleted) time_wheel->timeout_fn(tdata->data,is_deleted);
+        if(!tdata->is_deleted) time_wheel->timeout_fn(tdata->data);
+
+        tdata->is_deleted=1;
         t=tdata->next;
         // 回收data数据结构
         time_data_put(time_wheel,tdata);
@@ -53,9 +58,23 @@ static void time_wheel_timeout(struct time_wheel *time_wheel,struct time_data *f
     }
 }
 
+static struct time_tick *time_wheel_tick_get(struct time_wheel *time_wheel,time_t timeout)
+{
+    int n=timeout/time_wheel->every_tick_timeout;
+    struct time_tick *tick=time_wheel->cur_tick;
+
+    if(n<1) n=1;
+    n-=1;
+
+    n=tick->idx_no+n;
+
+    return tick;
+}
+
+
 int time_wheel_new(struct time_wheel *time_wheel,unsigned int tick_size,time_t every_tick_timeout,time_timeout_fn_t timeout_fn,unsigned int pre_alloc_data_num)
 {
-    struct time_tick *tick;
+    struct time_tick *tick,*last=NULL;
     struct time_data *tdata;
 
     // 检查参数是否合法,时间不能小于等于0
@@ -65,9 +84,17 @@ int time_wheel_new(struct time_wheel *time_wheel,unsigned int tick_size,time_t e
     }
 
     bzero(time_wheel,sizeof(struct time_wheel));
-    
+
+    time_wheel->tick_idx=malloc(sizeof(NULL)*(tick_size+1));
+    if(NULL==time_wheel->tick_idx){
+        STDERR("cannot malloc tick index\r\n");
+        return -1;
+    }
+
+    bzero(time_wheel->tick_idx,sizeof(NULL)*(tick_size+1));
+   
     // 这里tick数目多一个是考虑临界情况
-    for(int n=0;n<tick_size+1;n++){
+    for(int n=0;n<tick_size;n++){
         tick=malloc(sizeof(struct time_tick));
         if(NULL==tick){
             time_wheel_release(time_wheel);
@@ -75,12 +102,18 @@ int time_wheel_new(struct time_wheel *time_wheel,unsigned int tick_size,time_t e
             return -1;
         }
 
-        time_wheel->tick_size+=1;
-
         bzero(tick,sizeof(struct time_tick));
-        tick->next=time_wheel->cur_tick;
-        time_wheel->cur_tick=tick;
+
+        if(NULL==last) time_wheel->cur_tick=tick;
+        else last->next=tick;
+
+        last=tick;
+        tick->idx_no=n;
+        time_wheel->tick_idx[n]=tick;
+        time_wheel->tick_size+=1;
     }
+
+    last->next=time_wheel->cur_tick;
 
     for(int n=0;n<pre_alloc_data_num;n++){
         tdata=malloc(sizeof(struct time_data));
@@ -112,7 +145,7 @@ void time_wheel_release(struct time_wheel *time_wheel)
 
     for(int n=0;n<time_wheel->tick_size;n++){
         t=tick->next;
-        time_wheel_timeout(time_wheel,tick->time_data,0);
+        time_wheel_timeout(time_wheel,tick->time_data);
         free(tick);
         tick=t;
     }
@@ -124,6 +157,8 @@ void time_wheel_release(struct time_wheel *time_wheel)
         tdata=tmp;
     }
 
+    if(NULL!=time_wheel->tick_idx) free(time_wheel->tick_idx);
+
     bzero(time_wheel,sizeof(struct time_wheel));
 }
 
@@ -131,29 +166,17 @@ void time_wheel_release(struct time_wheel *time_wheel)
 struct time_data *time_wheel_add(struct time_wheel *time_wheel,void *data,time_t timeout)
 {
     struct time_data *tdata;
-    struct time_tick *tick=time_wheel->cur_tick;
-    unsigned int tick_n;
+    struct time_tick *tick=NULL;
 
     if(timeout<0){
         STDERR("the timeout must be more than zero\r\n");
         return NULL;
     }
 
-    // 因为之前tick_size增加了1,所以这里需要减去1
-    if(timeout>(time_wheel->tick_size-1) * time_wheel->every_tick_timeout){
-        STDERR("the value of timeout out of range\r\n");
-        return NULL;
-    }
-
-    // 计算出需要移动的格数
-    tick_n=timeout / time_wheel->every_tick_timeout;
-    // 这里的时间必须大于或者等于一个tick的值
-    if(tick_n<1){
-        STDERR("the value of timeout is too small\r\n");
-        return NULL;
-    }
+    tick=time_wheel_tick_get(time_wheel,timeout);
 
     tdata=time_data_get(time_wheel);
+
     if(NULL==tdata){
         STDERR("no memory for struct time_data\r\n");
         return NULL;
@@ -161,10 +184,8 @@ struct time_data *time_wheel_add(struct time_wheel *time_wheel,void *data,time_t
 
     bzero(tdata,sizeof(struct time_data));
     
-    // 找到要插入的tick位置
-    for(int n=0;n<tick_n-1;n++) tick=tick->next;
-    
     tdata->next=tick->time_data;
+    tdata->data=data;
     tick->time_data=tdata;
 
     return tdata;
@@ -177,12 +198,20 @@ void time_wheel_handle(struct time_wheel *time_wheel)
     time_t v=now-time_wheel->old_time;
     struct time_tick *tick=time_wheel->cur_tick;
 
-    // 时间倒流的情况处理,该情况会发生在系统时间过快调整时间导致时间倒流
-    if(v<0) tick_n=time_wheel->tick_size;
-    else tick_n=v / time_wheel->every_tick_timeout;
+    tick_n=v/time_wheel->every_tick_timeout;
 
+    //DBG("tick %d\r\n",tick_n);
     for(int n=0;n<tick_n;n++){
-        time_wheel_timeout(time_wheel,tick->time_data,0);
+        //DBG_FLAGS;
+        time_wheel_timeout(time_wheel,tick->time_data);
+        //DBG_FLAGS;
+        tick->time_data=NULL;
         tick=tick->next;
+    }
+
+    // 这里tick_n大于0才能更新时间,否则tick将永远无法向前移动
+    if(tick_n>0) {
+        time_wheel->old_time=now;
+        time_wheel->cur_tick=tick;
     }
 }

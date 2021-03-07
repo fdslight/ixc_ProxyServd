@@ -19,9 +19,10 @@ from ixc_proxy import lib as proc, lib as utils, lib as proto_utils, lib as nat,
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
+import ixc_proxy.lib.proxy as proxy
 
 
-class _fdslight_server(dispatcher.dispatcher):
+class proxyd(dispatcher.dispatcher):
     __configs = None
     __debug = None
 
@@ -44,17 +45,12 @@ class _fdslight_server(dispatcher.dispatcher):
 
     __DEVNAME = "ixcsys"
 
-    # 是否开启NAT66
     __enable_nat6 = False
-    __ip6_dgram = None
 
-    __dgram_proxy = None
-    __ip4_fragment = None
     __dns_is_ipv6 = None
     __dns_addr = None
 
-    # 是否开启NAT模块
-    __enable_nat_module = None
+    __proxy = None
 
     @property
     def http_configs(self):
@@ -64,18 +60,19 @@ class _fdslight_server(dispatcher.dispatcher):
 
         return pyo
 
+    def netpkt_sent_cb(self, byte_data: bytes, _from: int):
+        pass
+
+    def udp_recv_cb(self, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool, is_ipv6: bool,
+                    byte_data: bytes):
+        pass
+
     def init_func(self, debug, configs, enable_nat_module=False):
         self.create_poll()
 
         self.__configs = configs
         self.__debug = debug
-
-        self.__ip6_dgram = {}
-        self.__dgram_proxy = {}
-        self.__ip4_fragment = {}
-        self.__enable_nat_module = enable_nat_module
-
-        if enable_nat_module: self.__load_nat_module()
+        self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
@@ -140,22 +137,16 @@ class _fdslight_server(dispatcher.dispatcher):
                                                 self.__crypto_configs, is_ipv6=False)
 
         self.__tundev_fileno = self.create_handler(-1, tundev.tundevs, self.__DEVNAME)
-
-        self.__raw_fileno = self.create_handler(-1, traffic_pass.ip4_raw_send)
-
         self.__access = access.access(self)
-
-        self.__mbuf = utils.mbuf()
 
         nat_config = configs["nat"]
 
         try:
-            self.__ip4_mtu = int(nat_config["p2p_mtu"])
+            self.__ip4_mtu = int(nat_config["mtu"])
         except KeyError:
             self.__ip4_mtu = 1400
-
         try:
-            self.__ip6_mtu = int(nat_config["p2p6_mtu"])
+            self.__ip6_mtu = int(nat_config["mtu_v6"])
         except KeyError:
             self.__ip6_mtu = 1280
 
@@ -191,11 +182,11 @@ class _fdslight_server(dispatcher.dispatcher):
             sys.stderr = open(ERR_FILE, "a+")
 
     def myloop(self):
-        if self.__enable_nat6:
-            self.__nat6.recycle()
-        self.__nat4.recycle()
         self.__access.access_loop()
-        return
+
+    @property
+    def proxy(self):
+        return self.__proxy
 
     def handle_msg_from_tunnel(self, fileno, session_id, address, action, message):
         size = len(message)
@@ -575,9 +566,9 @@ class _fdslight_server(dispatcher.dispatcher):
         os.system("insmod %s" % ko_file)
 
 
-def __start_service(debug, enable_nat_module):
+def __start_service(debug):
     if not debug and os.path.isfile(PID_FILE):
-        print("the fdsl_server process exists")
+        print("the proxy server process exists")
         return
 
     if not debug:
@@ -592,13 +583,13 @@ def __start_service(debug, enable_nat_module):
         proc.write_pid(PID_FILE)
 
     configs = configfile.ini_parse_from_file("%s/ixc_configs/config.ini" % BASE_DIR)
-    cls = _fdslight_server()
+    cls = proxyd()
 
     if debug:
-        cls.ioloop(debug, configs, enable_nat_module=enable_nat_module)
+        cls.ioloop(debug, configs)
         return
     try:
-        cls.ioloop(debug, configs, enable_nat_module=enable_nat_module)
+        cls.ioloop(debug, configs)
     except:
         logging.print_error()
 
@@ -610,7 +601,7 @@ def __stop_service():
     pid = proc.get_pid(PID_FILE)
 
     if pid < 0:
-        print("cannot found fdslight server process")
+        print("cannot found proxy server process")
         return
 
     os.kill(pid, signal.SIGINT)
@@ -620,7 +611,7 @@ def __update_user_configs():
     pid = proc.get_pid(PID_FILE)
 
     if pid < 0:
-        print("cannot found ixcsys process")
+        print("cannot found proxy process")
         return
 
     os.kill(pid, signal.SIGUSR1)

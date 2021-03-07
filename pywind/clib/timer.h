@@ -5,7 +5,7 @@
 #include<sys/types.h>
 
 /// 超时回调函数
-typedef void(*time_timeout_fn_t)(void *data,int is_deleted);
+typedef void(*time_timeout_fn_t)(void *data);
 
 /// 数据存储对象
 struct time_data{
@@ -22,13 +22,19 @@ struct time_tick{
     // 指向下一个tick
     struct time_tick *next;
     struct time_data *time_data;
+    // 索引号
+    int idx_no;
 };
 
 /// 时间轮对象
 struct time_wheel{
     // 当前tick
     struct time_tick *cur_tick;
+    // tick索引
+    struct time_tick **tick_idx;
+
     struct time_data *empty_data_head;
+
     time_timeout_fn_t timeout_fn;
     // 每个tick持续的时间
     time_t every_tick_timeout;

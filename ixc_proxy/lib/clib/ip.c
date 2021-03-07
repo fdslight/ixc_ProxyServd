@@ -8,6 +8,7 @@
 #include "ipunfrag.h"
 #include "proxy.h"
 #include "udp.h"
+#include "static_nat.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -20,7 +21,7 @@ void ip_handle(struct mbuf *m)
     int version= (header->ver_and_ihl & 0xf0) >> 4;
     int is_supported=0;
     unsigned short frag_info,frag_off;
-    int mf;
+    int mf,header_len=(header->ver_and_ihl & 0x0f) * 4;
     
     // 检查是否是IPv6,如果是IPv6那么处理IPv6协议
     if(version==6){
@@ -28,7 +29,14 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    // 首先检查长度是否符合要求
+    if(m->tail-m->offset<=header_len){
+        mbuf_put(m);
+        return;
+    }
+
     switch(header->protocol){
+        case 1:
         case 6:
         case 17:
         case 136:
@@ -43,6 +51,8 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    m->is_ipv6=0;
+
     frag_info=ntohs(header->frag_info);
     frag_off=frag_info & 0x1fff;
     mf=frag_info & 0x2000;
@@ -52,9 +62,10 @@ void ip_handle(struct mbuf *m)
     if(NULL==m) return;
     
     switch(header->protocol){
-        // 处理TCP协议
+        // 处理ICMP与TCP协议
+        case 1:
         case 6:
-            tcp_handle(m,0);
+            static_nat_handle(m);
             break;
         // 处理UDP和UDPLite协议
         case 17:
@@ -110,7 +121,7 @@ int ip_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char protoc
 
         memcpy(header->src_addr,src_addr,4);
         memcpy(header->dst_addr,dst_addr,4);
-
+        
         csum=csum_calc((unsigned short *)header,20);
         header->checksum=csum;
 
@@ -119,7 +130,7 @@ int ip_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char protoc
         tot_size+=cur_slice_size;
         frag_off+=(cur_slice_size/8);
 
-        netpkt_send(m,protocol,0);
+        netpkt_send(m);
     }
     
     return rs;

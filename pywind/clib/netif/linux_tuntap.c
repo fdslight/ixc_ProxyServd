@@ -85,6 +85,14 @@ int tundev_up(const char *name)
 	return __tuntap_up(name);
 }
 
+int tundev_set_nonblocking(int fd)
+{
+	int flags;
+
+    flags=fcntl(fd,F_GETFL,0);
+    return fcntl(fd,F_SETFL,flags | O_NONBLOCK);
+}
+
 int tapdev_create(char *tap_name)
 {
 	return __tuntap_create(tap_name,IFF_TAP | IFF_NO_PI);
@@ -98,4 +106,12 @@ void tapdev_close(int fd,const char *name)
 int tapdev_up(const char *name)
 {
 	return __tuntap_up(name);
+}
+
+int tapdev_set_nonblocking(int fd)
+{
+	int flags;
+
+    flags=fcntl(fd,F_GETFL,0);
+    return fcntl(fd,F_SETFL,flags | O_NONBLOCK);
 }
