@@ -6,7 +6,8 @@ import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.web.lib.httputils as httputils
 import pywind.web.lib.websocket as wslib
 
-from ixc_proxy import lib as proto_utils, lib as logging
+import ixc_proxy.lib.base_proto.utils as proto_utils
+import ixc_proxy.lib.logging as logging
 
 
 class tcp_tunnel(tcp_handler.tcp_handler):
@@ -249,6 +250,9 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     def session_id(self):
         return self.__session_id
 
+    def is_tcp(self):
+        return True
+
 
 class udp_tunnel(udp_handler.udp_handler):
     def init_func(self, creator, address, crypto, crypto_configs, is_ipv6=False):
@@ -309,3 +313,6 @@ class udp_tunnel(udp_handler.udp_handler):
         for ippkt in ippkts: self.sendto(ippkt, address)
 
         self.add_evt_write(self.fileno)
+
+    def is_tcp(self):
+        return False

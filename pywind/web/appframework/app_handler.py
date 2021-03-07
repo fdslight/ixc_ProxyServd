@@ -107,7 +107,7 @@ class _request(object):
         form_type = self.__get_post_form_type()
         self.__form_type = form_type
 
-        if form_type == self.__FORM_TYPE_UNKOWN: raise RequestErr("unkown form type")
+        if form_type == self.__FORM_TYPE_UNKOWN: pass
         if form_type == self.__FORM_TYPE_PLAIN: pass
         if form_type == self.__FORM_TYPE_MULTIPART:
             boundary = self.__get_form_multipart_boundary()
@@ -319,6 +319,13 @@ class _request(object):
 
         if None == self.__stream_params: return default
         return self.__get_argument(self.__stream_params, name, default, is_seq)
+
+    @property
+    def post_argument(self):
+        """获取原始的POST内容参数
+        """
+        if None == self.__stream_params: return {}
+        return self.__stream_params
 
     @property
     def files(self):

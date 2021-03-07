@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, getopt, os, signal, importlib, socket
+import sys, getopt, os, signal, importlib, json
 
 BASE_DIR = os.path.dirname(sys.argv[0])
 
@@ -13,13 +13,15 @@ ERR_FILE = "/tmp/ixc_proxy_error.log"
 
 import pywind.evtframework.evt_dispatcher as dispatcher
 import pywind.lib.configfile as configfile
+import pywind.lib.netutils as netutils
 
-from ixc_proxy import lib as proc, lib as utils, lib as proto_utils, lib as nat, lib as ip6dgram, lib as logging, \
-    lib as fn_utils
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
 import ixc_proxy.lib.proxy as proxy
+import ixc_proxy.lib.logging as logging
+import ixc_proxy.lib.proc as proc
+import ixc_proxy.lib.base_proto.utils as proto_utils
 
 
 class proxyd(dispatcher.dispatcher):
@@ -27,14 +29,11 @@ class proxyd(dispatcher.dispatcher):
     __debug = None
 
     __access = None
-    __mbuf = None
-
     __udp6_fileno = -1
     __tcp6_fileno = -1
 
     __udp_fileno = -1
     __tcp_fileno = -1
-
     __dns_fileno = -1
 
     __tcp_crypto = None
@@ -56,18 +55,31 @@ class proxyd(dispatcher.dispatcher):
     def http_configs(self):
         configs = self.__configs.get("tunnel_over_http", {})
 
-        pyo = {"auth_id": configs.get("auth_id", "fdslight"), "origin": configs.get("origin", "example.com")}
+        pyo = {"auth_id": configs.get("auth_id", "ixcsys"), "origin": configs.get("origin", "example.com")}
 
         return pyo
 
-    def netpkt_sent_cb(self, byte_data: bytes, _from: int):
-        pass
+    def load_crypto_configs(self, crypto_fpath: str):
+        if not os.path.isfile(crypto_fpath):
+            raise SystemError("not found file %s", crypto_fpath)
+
+        with open(crypto_fpath, "r") as f:
+            s = f.read()
+        f.close()
+        return json.loads(s)
+
+    def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int):
+        # 如果数据来源于LAN那么发送到TUN设备
+        if _from == proxy.FROM_LAN:
+            self.get_handler(self.__tundev_fileno).send_msg(byte_data)
+            return
+        self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
 
     def udp_recv_cb(self, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool, is_ipv6: bool,
                     byte_data: bytes):
         pass
 
-    def init_func(self, debug, configs, enable_nat_module=False):
+    def init_func(self, debug, configs):
         self.create_poll()
 
         self.__configs = configs
@@ -77,7 +89,7 @@ class proxyd(dispatcher.dispatcher):
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
 
-        conn_config = self.__configs["connection"]
+        conn_config = self.__configs["listen"]
         mod_name = "ixc_proxy.access.%s" % conn_config["access_module"]
 
         try:
@@ -104,7 +116,7 @@ class proxyd(dispatcher.dispatcher):
             sys.exit(-1)
 
         try:
-            self.__crypto_configs = proto_utils.load_crypto_configfile(crypto_configfile)
+            self.__crypto_configs = self.load_crypto_configs(crypto_configfile)
         except:
             print("crypto configfile should be json file")
             sys.exit(-1)
@@ -136,7 +148,7 @@ class proxyd(dispatcher.dispatcher):
         self.__udp_fileno = self.create_handler(-1, tunnels.udp_tunnel, listen, self.__udp_crypto,
                                                 self.__crypto_configs, is_ipv6=False)
 
-        self.__tundev_fileno = self.create_handler(-1, tundev.tundevs, self.__DEVNAME)
+        self.__tundev_fileno = self.create_handler(-1, tundev.tundev, self.__DEVNAME)
         self.__access = access.access(self)
 
         nat_config = configs["nat"]
@@ -151,7 +163,7 @@ class proxyd(dispatcher.dispatcher):
             self.__ip6_mtu = 1280
 
         dns_addr = nat_config["dns"]
-        if utils.is_ipv6_address(dns_addr):
+        if netutils.is_ipv6_address(dns_addr):
             is_ipv6 = True
         else:
             is_ipv6 = False
@@ -159,22 +171,15 @@ class proxyd(dispatcher.dispatcher):
         self.__dns_is_ipv6 = is_ipv6
         self.__dns_addr = dns_addr
 
-        self.__dns_fileno = self.create_handler(-1, dns_proxy.dnsd_proxy, dns_addr, is_ipv6=is_ipv6)
+        self.__dns_fileno = self.create_handler(-1, dns_proxy.dns_client, dns_addr, is_ipv6=is_ipv6)
 
         enable_ipv6 = bool(int(nat_config["enable_nat66"]))
-        subnet, prefix = utils.extract_subnet_info(nat_config["virtual_ip6_subnet"])
+        subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
         eth_name = nat_config["eth_name"]
-        ip6_gw = nat_config["ip6_gw"]
 
-        self.__ip6_udp_cone_nat = bool(int(nat_config.get("ip6_udp_cone_nat", 0)))
+        if enable_ipv6: self.__config_gateway6(subnet, prefix, eth_name)
 
-        if enable_ipv6:
-            self.__nat6 = nat.nat((subnet, prefix,), is_ipv6=True)
-            self.__enable_nat6 = True
-            self.__config_gateway6(subnet, prefix, ip6_gw, eth_name)
-
-        subnet, prefix = utils.extract_subnet_info(nat_config["virtual_ip_subnet"])
-        self.__nat4 = nat.nat((subnet, prefix,), is_ipv6=False)
+        subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
         self.__config_gateway(subnet, prefix, eth_name)
 
         if not debug:
@@ -183,223 +188,52 @@ class proxyd(dispatcher.dispatcher):
 
     def myloop(self):
         self.__access.access_loop()
+        io_wait = self.proxy.loop()
+        if not io_wait:
+            self.set_default_io_wait_time(0)
+        else:
+            self.set_default_io_wait_time(10)
 
     @property
     def proxy(self):
         return self.__proxy
 
-    def handle_msg_from_tunnel(self, fileno, session_id, address, action, message):
-        size = len(message)
-        # 删除旧的连接
-        if self.__access.session_exists(session_id):
-            session_info = self.__access.get_session_info(session_id)
-            old_fileno = session_info[0]
-            if old_fileno != fileno:
-                if old_fileno not in (self.__udp6_fileno, self.__udp_fileno,):
-                    self.delete_handler(old_fileno)
-                ''''''
-            ''''''
-        b = self.__access.data_from_recv(fileno, session_id, address, size)
-        if not b: return False
-        if size > utils.MBUF_AREA_SIZE: return False
-        if action not in proto_utils.ACTS: return False
-        if action == proto_utils.ACT_DNS:
-            self.__request_dns(session_id, message)
-            return True
-        if action == proto_utils.ACT_IPDATA:
-            self.__mbuf.copy2buf(message)
-        return self.__handle_ipdata_from_tunnel(session_id)
-
-    def __handle_ipdata_from_tunnel(self, session_id):
-        ip_ver = self.__mbuf.ip_version()
-
-        if ip_ver not in (4, 6,): return False
-        if ip_ver == 4: return self.__handle_ipv4data_from_tunnel(session_id)
-
-        return self.__handle_ipv6data_from_tunnel(session_id)
-
-    def __handle_ipv6data_from_tunnel(self, session_id):
-        # 如果NAT66没开启那么丢弃IPV6数据包
-        if not self.__enable_nat6: return False
-
-        if self.__mbuf.payload_size < 48: return False
-
-        # 检查IPV6数据包长度是否合法
-        self.__mbuf.offset = 4
-        payload_length = utils.bytes2number(self.__mbuf.get_part(2))
-        if payload_length + 40 != self.__mbuf.payload_size: return False
-
-        self.__mbuf.offset = 6
-        nexthdr = self.__mbuf.get_part(1)
-
-        if nexthdr not in self.__support_ip6_protocols: return False
-
-        self.__mbuf.offset = 40
-        nexthdr = self.__mbuf.get_part(1)
-
-        if nexthdr in (17, 136,) and self.__ip6_udp_cone_nat:
-            is_udplite = False
-            if nexthdr == 136: is_udplite = True
-            self.__handle_ipv6_dgram_from_tunnel(session_id, is_udplite=is_udplite)
-            return True
-
-        b = self.__nat6.get_ippkt2sLan_from_cLan(session_id, self.__mbuf)
-        if not b:
-            logging.print_error("cannot modify source address from client packet for ipv6")
-            return False
-
-        self.__mbuf.offset = 24
-        self.__mbuf.offset = 0
-        self.get_handler(self.__tundev_fileno).handle_msg_from_tunnel(self.__mbuf.get_data())
-
-        return True
-
-    def __handle_ipv4data_from_tunnel(self, session_id):
-        self.__mbuf.offset = 9
-        protocol = self.__mbuf.get_part(1)
-
-        hdrlen = self.__get_ip4_hdrlen()
-        if hdrlen + 8 < 28: return False
-
-        # 检查IP数据报长度是否合法
-        self.__mbuf.offset = 2
-        payload_length = utils.bytes2number(self.__mbuf.get_part(2))
-        if payload_length != self.__mbuf.payload_size: return False
-
-        if protocol not in self.__support_ip4_protocols: return False
-
-        # 对没有启用NAT内核模块UDP和UDPLite进行特殊处理,以支持内网穿透
-        if (protocol == 17 or protocol == 136) and not self.__enable_nat_module:
-            is_udplite = False
-            if protocol == 136: is_udplite = True
-            self.__handle_ipv4_dgram_from_tunnel(session_id, is_udplite=is_udplite)
-            return True
-        self.__mbuf.offset = 0
-
-        rs = self.__nat4.get_ippkt2sLan_from_cLan(session_id, self.__mbuf)
-        if not rs:
-            logging.print_error("cannot modify source address from client packet for ipv4")
-            return
-        self.__mbuf.offset = 0
-        self.get_handler(self.__tundev_fileno).handle_msg_from_tunnel(self.__mbuf.get_data())
-        return True
-
-    def __handle_ipv4_dgram_from_tunnel(self, session_id, is_udplite=False):
-        mbuf = self.__mbuf
-        mbuf.offset = 4
-
-        mbuf.offset = 6
-        frag_off = utils.bytes2number(mbuf.get_part(2))
-
-        df = (frag_off & 0x4000) >> 14
-        mf = (frag_off & 0x2000) >> 13
-        offset = frag_off & 0x1fff
-
-        if offset == 0:
-            sts_saddr, sts_daddr, sport, dport = self.__get_ipv4_dgram_pkt_addr_info()
-            if dport == 0: return False
-
-        # 把源地址和checksum设置为0
-        mbuf.offset = 12
-        mbuf.replace(b"\0\0\0\0")
-
-        mbuf.offset = 10
-        mbuf.replace(b"\0\0")
-        ##
-
-        if offset != 0:
-            mbuf.offset = 0
-            self.send_message_to_handler(-1, self.__raw_fileno, mbuf.get_data())
-            return
-
-        _id = "%s-%s" % (sts_saddr, sport,)
-
-        fileno = -1
-        if session_id in self.__dgram_proxy:
-            pydict = self.__dgram_proxy[session_id]
-            if _id in pydict: fileno = pydict[_id]
-
-        if fileno < 0:
-            fileno = self.create_handler(-1, traffic_pass.p2p_proxy, session_id, (sts_saddr, sport,),
-                                         mtu=self.__ip4_mtu, is_udplite=is_udplite, is_ipv6=False)
-            if fileno < 0: return
-
-        self.get_handler(fileno).add_permit((sts_daddr, dport,))
-        _, new_sport = self.get_handler(fileno).getsockname()
-
-        hdrlen = self.__get_ip4_hdrlen()
-        # 替换源端口
-        mbuf.offset = hdrlen
-        mbuf.replace(utils.number2bytes(new_sport, 2))
-
-        mbuf.offset = hdrlen + 6
-
-        if not is_udplite:
-            mbuf.replace(b"\0\0")
-        else:
-            csum = utils.bytes2number(mbuf.get_part(2))
-            csum = fn_utils.calc_incre_csum(csum, sport, new_sport)
-            mbuf.replace(utils.number2bytes(csum, 2))
-
-        if session_id not in self.__dgram_proxy:
-            self.__dgram_proxy[session_id] = {}
-
-        pydict = self.__dgram_proxy[session_id]
-        pydict[_id] = fileno
-
-        mbuf.offset = 0
-        self.send_message_to_handler(-1, self.__raw_fileno, mbuf.get_data())
-
-    def __send_msg_to_tunnel(self, session_id, action, message):
-        if not self.__access.session_exists(session_id): return
-        if not self.__access.data_for_send(session_id, len(message)): return
-
-        session_info = self.__access.get_session_info(session_id)
-        fileno = session_info[0]
+    def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
+        if not self.__access.session_exists(_id): return
+        # 此处找打用户的文件描述符以及IP地址
+        fileno, username, address, priv_data = self.__access.get_session_info()
 
         if not self.handler_exists(fileno): return
 
-        ### 注意这里的问题,fileno会重用,会导致发错数据包,p2p的handler和tunnel连接的handler的fileno会经常创建以及删除
-        ### 由于两个handler的send_msg的参数不一样,因此可以通过此方法判断是哪个handler,避免发错数据
-        try:
-            self.get_handler(fileno).send_msg(session_id, session_info[2], action, message)
-        except TypeError:
-            self.__access.del_session(session_id)
+        # 此处检查是否是TCP,如果是TCP那么检查session id是否一致
+        if self.get_handler(fileno).is_tcp():
+            session_id = self.get_handler(fileno).session_id
+            if not session_id: return
+            if session_id != _id: return
+        if not self.__access.data_for_send(_id, len(message)): return
+
+        self.get_handler(fileno).send_msg(_id, address, action, message)
+
+    def handle_msg_from_tunnel(self, fileno, session_id, address, action, message):
+        # 此处验证用户
+        auth_ok = self.__access.data_from_recv(fileno, session_id, address, len(message))
+        if not auth_ok: return
+
+        self.__access.modify_session(fileno, address)
+
+        if action == proto_utils.ACT_DNS:
+            self.get_handler(self.__dns_fileno).send_msg(session_id, message)
             return
 
-    def send_msg_to_tunnel_from_tun(self, message):
-        if len(message) > utils.MBUF_AREA_SIZE: return
+        if action == proto_utils.ACT_IPDATA:
+            self.proxy.netpkt_handle(session_id, message, proxy.FROM_LAN)
+            return
 
-        self.__mbuf.copy2buf(message)
+    def handle_ippkt_from_tundev(self, msg: bytes):
+        self.proxy.netpkt_handle(bytes(16), msg, proxy.FROM_WAN)
 
-        ip_ver = self.__mbuf.ip_version()
-
-        if ip_ver == 6 and not self.__enable_nat6: return
-        if ip_ver == 4:
-            ok, session_id = self.__nat4.get_ippkt2cLan_from_sLan(self.__mbuf)
-        else:
-            ok, session_id = self.__nat6.get_ippkt2cLan_from_sLan(self.__mbuf)
-
-        if not ok: return
-
-        self.__mbuf.offset = 0
-        self.__send_msg_to_tunnel(session_id, proto_utils.ACT_IPDATA, self.__mbuf.get_data())
-
-    def send_msg_to_tunnel_from_p2p_proxy(self, session_id, message):
-        self.__send_msg_to_tunnel(session_id, proto_utils.ACT_IPDATA, message)
-
-    def response_dns(self, session_id, message):
-        self.__send_msg_to_tunnel(session_id, proto_utils.ACT_DNS, message)
-
-    def __request_dns(self, session_id, message):
-        # 检查DNS是否异常退出,如果退出,那么重启DNS服务
-        if not self.handler_exists(self.__dns_fileno):
-            self.__dns_fileno = self.create_handler(-1, dns_proxy.dnsd_proxy, self.__dns_fileno,
-                                                    is_ipv6=self.__dns_is_ipv6)
-        # 检查DNS服务是否创建成功
-        if not self.handler_exists(self.__dns_fileno): return
-
-        self.get_handler(self.__dns_fileno).request_dns(session_id, message)
+    def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
+        self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, message)
 
     def __config_gateway(self, subnet, prefix, eth_name):
         """ 配置IPV4网关
@@ -418,112 +252,19 @@ class proxyd(dispatcher.dispatcher):
         os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
         os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
-    def __config_gateway6(self, ip6_subnet, prefix, ip6_gw, eth_name):
+    def __config_gateway6(self, ip6_subnet, prefix, eth_name):
         """配置IPV6网关
         :param ip6address:
-        :param ip6_gw:
         :param eth_name:
         :return:
         """
-        # 添加一条到tun设备的IPv6路由
-        cmd = "ip -6 route add %s/%s dev %s" % (ip6_subnet, prefix, self.__DEVNAME)
-        os.system(cmd)
         # 开启IPV6流量重定向
         os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
 
-        os.system("ip -6 route add default via %s dev %s" % (ip6_gw, eth_name,))
+        # os.system("ip -6 route add default via %s dev %s" % (ip6_gw, eth_name,))
 
-        os.system("ip6tables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (ip6_subnet, prefix, eth_name,))
-        os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (ip6_subnet, prefix))
-
-    def __get_ip4_hdrlen(self):
-        self.__mbuf.offset = 0
-        n = self.__mbuf.get_part(1)
-        hdrlen = (n & 0x0f) * 4
-        return hdrlen
-
-    def __get_ipv4_dgram_pkt_addr_info(self):
-        """获取数据包的地址信息
-        :param mbuf:
-        :return:
-        """
-        mbuf = self.__mbuf
-
-        hdrlen = self.__get_ip4_hdrlen()
-
-        mbuf.offset = hdrlen + 2
-        dport = utils.bytes2number(mbuf.get_part(2))
-        mbuf.offset = hdrlen
-        sport = utils.bytes2number(mbuf.get_part(2))
-
-        mbuf.offset = 16
-        daddr = mbuf.get_part(4)
-        mbuf.offset = 12
-        saddr = mbuf.get_part(4)
-
-        return (socket.inet_ntoa(saddr), socket.inet_ntoa(daddr), sport, dport,)
-
-    def __handle_ipv6_dgram_from_tunnel(self, session_id, is_udplite=False):
-        """处理IPV6 dgram数据报
-        :return:
-        """
-        dgram_proxy = self.__ip6_dgram[session_id]
-
-        dgram_proxy.add_frag(self.__mbuf)
-
-        data = dgram_proxy.get_data()
-        if not data: return
-
-        saddr, daddr, sport, dport, msg = data
-
-        if session_id not in self.__dgram_proxy:
-            self.__dgram_proxy[session_id] = {}
-        pydict = self.__dgram_proxy[session_id]
-
-        dgram_id = "%s-%s" % (saddr, sport,)
-        if dgram_id not in pydict:
-            fileno = self.create_handler(-1, traffic_pass.p2p_proxy, session_id, (saddr, sport), mtu=self.__ip6_mtu,
-                                         is_udplite=is_udplite, is_ipv6=True)
-            if fileno < 0:
-                if not pydict: del self.__dgram_proxy[session_id]
-                return
-            pydict[dgram_id] = fileno
-        fileno = pydict[dgram_id]
-        self.get_handler(fileno).send_msg(msg, (daddr, dport))
-
-    def tell_register_session(self, session_id):
-        """告知注册session
-        :param session_id:
-        :return:
-        """
-        self.__ip6_dgram[session_id] = ip6dgram.ip6_dgram_proxy()
-
-    def tell_unregister_session(self, session_id, fileno):
-        """告知取消session注册
-        :param session_id:
-        :param fileno:
-        :return:
-        """
-        if fileno not in (self.__udp_fileno, self.__udp6_fileno):
-            self.delete_handler(fileno)
-        del self.__ip6_dgram[session_id]
-
-    def tell_del_dgram_proxy(self, session_id, saddr, sport):
-        """告知删除UDP代理
-        :param session_id:
-        :param saddr:
-        :param sport:
-        :return:
-        """
-        if session_id not in self.__dgram_proxy: return
-        pydict = self.__dgram_proxy[session_id]
-        key = "%s-%s" % (saddr, sport)
-
-        if key not in pydict: return
-        del pydict[key]
-        if not pydict: del self.__dgram_proxy[session_id]
-        if session_id in self.__ip4_fragment:
-            del self.__ip4_fragment[session_id]
+        # os.system("ip6tables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (ip6_subnet, prefix, eth_name,))
+        # os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (ip6_subnet, prefix))
 
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns_fileno):
@@ -533,37 +274,10 @@ class proxyd(dispatcher.dispatcher):
         if self.handler_exists(self.__tcp_fileno):
             self.delete_handler(self.__tcp_fileno)
 
-        if self.__enable_nat_module:
-            os.system("rmmod %s/driver/xt_FULLCONENAT.ko" % BASE_DIR)
-
         sys.exit(0)
 
     def __handle_user_change_signal(self, signum, frame):
         self.__access.handle_user_change_signal()
-
-    def __load_nat_module(self):
-        ko_file = "%s/driver/xt_FULLCONENAT.ko" % BASE_DIR
-
-        if not os.path.isfile(ko_file):
-            print("you must")
-            sys.exit(-1)
-
-        fpath = "%s/ixc_configs/kern_version" % BASE_DIR
-        if not os.path.isfile(fpath):
-            print("you must build nat module")
-            sys.exit(-1)
-
-        with open(fpath, "r") as f:
-            cp_ver = f.read()
-            fp = os.popen("uname -r")
-            now_ver = fp.read()
-            fp.close()
-
-        if cp_ver != now_ver:
-            print("the kernel is changed,please reinstall this software")
-            sys.exit(-1)
-
-        os.system("insmod %s" % ko_file)
 
 
 def __start_service(debug):
@@ -665,7 +379,7 @@ def main():
     if d == "debug": debug = True
     if d == "start": debug = False
 
-    __start_service(debug, enable_nat_module)
+    __start_service(debug)
 
 
 if __name__ == '__main__': main()

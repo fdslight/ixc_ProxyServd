@@ -12,10 +12,7 @@ ACT_PING = 3
 # PONG
 ACT_PONG = 4
 
-# 表示VLAN数据
-ACT_VLAN = 5
-
-ACTS = (ACT_IPDATA, ACT_DNS, ACT_PING, ACT_PONG, ACT_VLAN,)
+ACTS = (ACT_IPDATA, ACT_DNS, ACT_PING, ACT_PONG,)
 
 
 def rand_bytes(max_size=64):

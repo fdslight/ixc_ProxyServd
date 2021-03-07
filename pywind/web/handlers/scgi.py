@@ -67,6 +67,7 @@ class scgid(tcp_handler.tcp_handler):
     __mtime = None
     __sent_buf = None
     __closed = None
+    __configs = None
 
     def __parse_scgi_header(self):
         size = self.reader.size()
@@ -130,6 +131,7 @@ class scgid(tcp_handler.tcp_handler):
 
     def init_func(self, creator_fd, cs, caddr, configs):
         self.__creator = creator_fd
+        self.__configs = configs
         self.__application = configs.get("application", None)
         self.__timeout = configs.get("timeout", 30)
         self.set_socket(cs)
@@ -152,7 +154,7 @@ class scgid(tcp_handler.tcp_handler):
         del cgi_env["SCGI"]
 
         self.__wsgi = wsgi.wsgi(self.__application, cgi_env, self.__resp_header, self.__resp_body_data,
-                                self.__finish_request)
+                                self.__finish_request, debug=self.__configs.get("debug", False))
         self.__wsgi.input(body_data)
         self.__mtime = time.time()
         self.__wsgi.handle()

@@ -8,8 +8,8 @@ seq: 4 bit 当前分包序号
 reverse:4 bit 保留
 action:4bit 动作
 """
-from ixc_proxy import lib as proto_utils
 import struct
+import ixc_proxy.lib.base_proto.utils as proto_utils
 
 MIN_FIXED_HEADER_SIZE = 22
 

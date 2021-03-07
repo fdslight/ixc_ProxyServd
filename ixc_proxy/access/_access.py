@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pywind.lib.timer as timer
-from ixc_proxy import lib as proto_utils, lib as logging
-
+import ixc_proxy.lib.logging as logging
+import ixc_proxy.lib.base_proto.utils as proto_utils
 
 class access(object):
     __timer = None
@@ -126,7 +126,6 @@ class access(object):
         if b:
             self.modify_session(session_id, fileno, address)
         return b
-
 
     def handle_user_change_signal(self):
         """重写这个方法,处理用户信息改变的信号

@@ -59,7 +59,7 @@ int netpkt_send(struct mbuf *m)
         return -1;
     }
 
-    arglist=Py_BuildValue("(y#i)",m->data+m->begin,m->end-m->begin,m->from);
+    arglist=Py_BuildValue("(y#y#i)",m->data+m->begin,m->end-m->begin,m->id,16,m->from);
     result=PyObject_CallObject(ip_sent_cb,arglist);
  
     Py_XDECREF(arglist);
@@ -210,12 +210,12 @@ proxy_mtu_set(PyObject *self,PyObject *args)
 static PyObject *
 proxy_netpkt_handle(PyObject *self,PyObject *args)
 {
-    const char *s;
-    Py_ssize_t size;
+    const char *s,*id;
+    Py_ssize_t size,id_size;
     struct mbuf *m;
     int from;
 
-    if(!PyArg_ParseTuple(args,"y#i",&s,&size,&from)) return NULL;
+    if(!PyArg_ParseTuple(args,"y#y#i",&id,&id_size,&s,&size,&from)) return NULL;
     if(size<21){
         STDERR("wrong IP data format\r\n");
         Py_RETURN_FALSE;
@@ -233,6 +233,8 @@ proxy_netpkt_handle(PyObject *self,PyObject *args)
     m->from=from;
 
     memcpy(m->data+m->offset,s,size);
+    memcpy(m->id,id,16);
+
     ip_handle(m);
 
     Py_RETURN_TRUE;
@@ -301,6 +303,13 @@ proxy_tun_close(PyObject *self,PyObject *args)
     Py_RETURN_NONE;
 }
 
+static PyObject *
+proxy_loop(PyObject *self,PyObject *args)
+{
+    sysloop_do();
+    Py_RETURN_TRUE;
+}
+
 static PyMemberDef proxy_members[]={
     {NULL}
 };
@@ -315,6 +324,8 @@ static PyMethodDef proxy_methods[]={
 
     {"tun_open",(PyCFunction)proxy_tun_open,METH_VARARGS,"open tun device"},
     {"tun_close",(PyCFunction)proxy_tun_close,METH_VARARGS,"close tun device"},
+
+    {"loop",(PyCFunction)proxy_loop,METH_NOARGS,"do loop"},
     
     {NULL,NULL,0,NULL}
 };

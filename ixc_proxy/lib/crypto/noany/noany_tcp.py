@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from ixc_proxy import lib as tunnel
+import ixc_proxy.lib.base_proto.tunnel_udp as tunnel
 
 
 class encrypt(tunnel.builder):

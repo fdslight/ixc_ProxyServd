@@ -8,7 +8,7 @@ sys.path.append("../../../")
 import hashlib
 import os
 
-from ixc_proxy import lib as tunnel, lib as proto_utils, lib as aes_cfb
+import ixc_proxy.lib.base_proto.tunnel_tcp as tunnel
 
 FIXED_HEADER_SIZE = 48
 

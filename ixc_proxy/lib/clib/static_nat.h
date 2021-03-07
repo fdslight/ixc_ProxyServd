@@ -14,6 +14,7 @@
 struct static_nat_record{
     struct time_data *tdata;
     struct ipalloc_record *ip_record;
+    unsigned char id[16];
     unsigned char lan_addr1[16];
     unsigned char lan_addr2[16];
     time_t up_time;
@@ -23,8 +24,11 @@ struct static_nat_record{
 };
 
 struct static_nat{
-    struct map *natv4;
-    struct map *natv6;
+    struct map *natv4_lan2wan;
+    struct map *natv4_wan2lan;
+    
+    struct map *natv6_lan2wan;
+    struct map *natv6_wan2lan;
 };
 
 int static_nat_init(void);

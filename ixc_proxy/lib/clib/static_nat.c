@@ -7,10 +7,12 @@
 #include "proxy.h"
 
 #include "../../../pywind/clib/netutils.h"
+#include "../../../pywind/clib/sysloop.h"
 
 static struct static_nat static_nat;
 static int static_nat_is_initialized=0;
 static struct time_wheel static_nat_time_wheel;
+static struct sysloop *static_nat_sysloop=NULL;
 
 /// 重写IPv6地址
 static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *new_addr,int is_src)
@@ -61,6 +63,11 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
     *((unsigned short *)(csum_ptr))=csum;
 }
 
+static void static_nat_sysloop_cb(struct sysloop *loop)
+{
+    time_wheel_handle(&static_nat_time_wheel);
+}
+
 /// 发送到下一个IPv4节点处理
 static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *header)
 {
@@ -91,26 +98,27 @@ static void static_nat_handle_v4(struct mbuf *m)
     struct ipalloc_record *ip_record;
     struct time_data *tdata;
     char is_found;
-    char *key;
+    char key[20];
     int is_src=0,rs;
 
     if(m->from==MBUF_FROM_LAN) {
-        key=(char *)(header->src_addr);
+        memcpy(key,m->id,16);
+        memcpy(&key[16],header->src_addr,4);
         is_src=1;
     }else{
-        key=(char *)(header->dst_addr);
-    }
-    
-    r=map_find(static_nat.natv4,key,&is_found);
+        memcpy(key,header->dst_addr,4);
+        r=map_find(static_nat.natv4_wan2lan,key,&is_found);
 
-    // 如果来自于WAN并且无映射记录那么丢弃数据包
-    if(m->from==MBUF_FROM_WAN && r==NULL){
-        mbuf_put(m);
-        return;
+        if(NULL==r){
+            mbuf_put(m);
+            return;
+        }
     }
 
     if(m->from==MBUF_FROM_WAN){
         r->up_time=time(NULL);
+
+        memcpy(m->id,r->id,16);
         rewrite_ip_addr(header,r->lan_addr1,is_src);
 
         static_nat_send_next_for_v4(m,header);
@@ -149,7 +157,7 @@ static void static_nat_handle_v4(struct mbuf *m)
         return;
     }
 
-    rs=map_add(static_nat.natv4,(char *)(header->src_addr),r);
+    rs=map_add(static_nat.natv4_lan2wan,key,r);
     if(0!=rs){
         mbuf_put(m);
         free(r);
@@ -159,12 +167,12 @@ static void static_nat_handle_v4(struct mbuf *m)
         return;
     }
     
-    rs=map_add(static_nat.natv4,(char *)(header->dst_addr),r);
+    rs=map_add(static_nat.natv4_wan2lan,(char *)(header->dst_addr),r);
     if(0!=rs){
         mbuf_put(m);
         free(r);
         ipalloc_free(ip_record,0);
-        map_del(static_nat.natv4,(char *)(header->src_addr),NULL);
+        map_del(static_nat.natv4_lan2wan,key,NULL);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
         return;
@@ -174,9 +182,11 @@ static void static_nat_handle_v4(struct mbuf *m)
     r->up_time=time(NULL);
     r->refcnt=2;
     r->tdata=tdata;
+    r->is_ipv6=0;
 
     memcpy(r->lan_addr1,header->src_addr,4);
     memcpy(r->lan_addr2,ip_record->address,4);
+    memcpy(r->id,m->id,16);
 
     rewrite_ip_addr(header,r->lan_addr2,is_src);
 
@@ -186,32 +196,35 @@ static void static_nat_handle_v4(struct mbuf *m)
 
 static void static_nat_handle_v6(struct mbuf *m)
 {
+    //DBG_FLAGS;
     struct netutil_ip6hdr *header=(struct netutil_ip6hdr *)(m->data+m->offset);
     struct static_nat_record *r;
     struct ipalloc_record *ip_record;
     struct time_data *tdata;
     char is_found;
-    char *key;
+    char key[32];
     int is_src=0,rs;
 
+    //DBG_FLAGS;
+
     if(m->from==MBUF_FROM_LAN) {
-        key=(char *)(header->src_addr);
+        memcpy(key,m->id,16);
+        memcpy(&key[16],header->src_addr,16);
         is_src=1;
     }else{
-        key=(char *)(header->dst_addr);
-    }
-    
-    r=map_find(static_nat.natv6,key,&is_found);
+        memcpy(key,header->dst_addr,16);
+        r=map_find(static_nat.natv6_wan2lan,key,&is_found);
 
-    // 如果来自于WAN并且无映射记录那么丢弃数据包
-    if(m->from==MBUF_FROM_WAN && r==NULL){
-        mbuf_put(m);
-        return;
+        if(NULL==r){
+            mbuf_put(m);
+            return;
+        }
     }
 
     if(m->from==MBUF_FROM_WAN){
         r->up_time=time(NULL);
-        ip_record=r->ip_record;
+
+        memcpy(m->id,r->id,16);
         static_nat_rewrite_ip6(header,r->lan_addr1,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
@@ -232,7 +245,7 @@ static void static_nat_handle_v6(struct mbuf *m)
 
     bzero(r,sizeof(struct static_nat_record));
 
-    ip_record=ipalloc_alloc(1);
+    ip_record=ipalloc_alloc(0);
     if(NULL==ip_record){
         STDERR("cannot get new ip address\r\n");
         mbuf_put(m);
@@ -249,22 +262,22 @@ static void static_nat_handle_v6(struct mbuf *m)
         return;
     }
 
-    rs=map_add(static_nat.natv6,(char *)(header->src_addr),r);
+    rs=map_add(static_nat.natv6_lan2wan,key,r);
     if(0!=rs){
         mbuf_put(m);
         free(r);
-        ipalloc_free(ip_record,1);
+        ipalloc_free(ip_record,0);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
         return;
     }
     
-    rs=map_add(static_nat.natv6,(char *)(header->dst_addr),r);
+    rs=map_add(static_nat.natv6_wan2lan,(char *)(header->dst_addr),r);
     if(0!=rs){
         mbuf_put(m);
         free(r);
-        ipalloc_free(ip_record,1);
-        map_del(static_nat.natv6,(char *)(header->src_addr),NULL);
+        ipalloc_free(ip_record,0);
+        map_del(static_nat.natv4_lan2wan,key,NULL);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
         return;
@@ -278,9 +291,9 @@ static void static_nat_handle_v6(struct mbuf *m)
 
     memcpy(r->lan_addr1,header->src_addr,16);
     memcpy(r->lan_addr2,ip_record->address,16);
+    memcpy(r->id,m->id,16);
 
-    static_nat_rewrite_ip6(header,ip_record->address,is_src);
-
+    static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
     static_nat_send_next_for_v6(m,header);
 }
 
@@ -303,17 +316,29 @@ static void static_nat_timeout_cb(void *data)
 {
     struct static_nat_record *r=data;
     struct time_data *tdata=r->tdata;
+   
+    struct map *m_lan2wan=r->is_ipv6?static_nat.natv6_lan2wan:static_nat.natv4_lan2wan;
+    struct map *m_wan2lan=r->is_ipv6?static_nat.natv6_wan2lan:static_nat.natv4_wan2lan;
+
     time_t now=time(NULL);
 
-    struct map *m=r->is_ipv6?static_nat.natv6:static_nat.natv4;
+    char key[32];
 
+    memcpy(key,r->id,16);
+
+    if(r->is_ipv6){
+        memcpy(&key[16],r->lan_addr1,16);
+    }else{
+        memcpy(&key[16],r->lan_addr1,4);
+    }
+    
     // 如果超时那么直接删除数据
     if(now-r->up_time<STATIC_NAT_TIMEOUT){
         tdata=time_wheel_add(&static_nat_time_wheel,data,10);
         if(NULL==tdata){
             STDERR("cannot add to time wheel\r\n");
-            map_del(m,(char *)r->lan_addr1,static_nat_del_cb);
-            map_del(m,(char *)r->lan_addr2,static_nat_del_cb);
+            map_del(m_lan2wan,key,static_nat_del_cb);
+            map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
             return;
         }
 
@@ -323,8 +348,8 @@ static void static_nat_timeout_cb(void *data)
 
     DBG_FLAGS;
 
-    map_del(m,(char *)r->lan_addr1,static_nat_del_cb);
-    map_del(m,(char *)r->lan_addr2,static_nat_del_cb);
+    map_del(m_lan2wan,key,static_nat_del_cb);
+    map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
 }
 
 int static_nat_init(void)
@@ -337,38 +362,84 @@ int static_nat_init(void)
         return -1;
     }
 
+    static_nat_sysloop=sysloop_add(static_nat_sysloop_cb,NULL);
+    if(NULL==static_nat_sysloop){
+        STDERR("cannot add to sysloop");
+        time_wheel_release(&static_nat_time_wheel);
+        return -1;
+    }
+
     bzero(&static_nat,sizeof(struct static_nat));
+
+    rs=map_new(&m,32);
+    if(0!=rs){
+        STDERR("cannot create map for IPv6 LAN2WAN");
+        sysloop_del(static_nat_sysloop);
+        time_wheel_release(&static_nat_time_wheel);
+        return -1;
+    }
+    static_nat.natv6_lan2wan=m;
 
     rs=map_new(&m,16);
     if(0!=rs){
-        STDERR("cannot create map for IPv6");
+        STDERR("cannot create map for IPv6 WAN2LAN");
+        sysloop_del(static_nat_sysloop);
+        map_release(static_nat.natv6_lan2wan,NULL);
+
         time_wheel_release(&static_nat_time_wheel);
         return -1;
     }
-    static_nat.natv6=m;
+    static_nat.natv6_wan2lan=m;
+
+    rs=map_new(&m,20);
+    if(0!=rs){
+        STDERR("cannot create map for IPv4 LAN2WAN");
+        sysloop_del(static_nat_sysloop);
+
+        map_release(static_nat.natv6_lan2wan,NULL);
+        map_release(static_nat.natv6_wan2lan,NULL);
+
+        time_wheel_release(&static_nat_time_wheel);
+        return -1;
+    }
+    static_nat.natv4_lan2wan=m;
 
     rs=map_new(&m,4);
     if(0!=rs){
-        STDERR("cannot create map for IPv4");
-        map_release(static_nat.natv6,NULL);
+        STDERR("cannot create map for IPv4 WAN2LANs");
+        sysloop_del(static_nat_sysloop);
+
+        map_release(static_nat.natv6_lan2wan,NULL);
+        map_release(static_nat.natv6_wan2lan,NULL);
+        map_release(static_nat.natv4_lan2wan,NULL);
+
         time_wheel_release(&static_nat_time_wheel);
         return -1;
     }
+    static_nat.natv4_wan2lan=m;
+
     static_nat_is_initialized=1;
     return 0;
 }
 
 void static_nat_uninit(void)
 {
-    map_release(static_nat.natv4,static_nat_timeout_cb);
-    map_release(static_nat.natv6,static_nat_timeout_cb);
+    sysloop_del(static_nat_sysloop);
+
+    map_release(static_nat.natv4_lan2wan,static_nat_timeout_cb);
+    map_release(static_nat.natv4_wan2lan,static_nat_timeout_cb);
+
+    map_release(static_nat.natv6_lan2wan,static_nat_timeout_cb);
+    map_release(static_nat.natv6_wan2lan,static_nat_timeout_cb);
 
     time_wheel_release(&static_nat_time_wheel);
+
     static_nat_is_initialized=1;
 }
 
 void static_nat_handle(struct mbuf *m)
 {
+    //DBG_FLAGS;
     if(m->is_ipv6) static_nat_handle_v6(m);
     else static_nat_handle_v4(m);
 }

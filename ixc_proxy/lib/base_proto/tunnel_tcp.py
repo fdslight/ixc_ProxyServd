@@ -11,7 +11,7 @@ real_length: 2 bytes 加密前的长度
 MIN_FIXED_HEADER_SIZE = 23
 
 import pywind.lib.reader as reader
-from ixc_proxy import lib as proto_utils
+import ixc_proxy.lib.base_proto.utils as proto_utils
 import struct
 
 _FMT = "!16sbHHH"
