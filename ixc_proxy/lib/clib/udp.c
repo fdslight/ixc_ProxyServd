@@ -96,6 +96,7 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
     m->offset=m->begin;
     m->tail=m->begin+length+8;
     m->end=m->tail;
+    m->from=MBUF_FROM_WAN;
 
     udphdr=(struct netutil_udphdr *)(m->data+m->offset);
     bzero(udphdr,sizeof(struct netutil_udphdr));

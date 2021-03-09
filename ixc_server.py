@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, getopt, os, signal, importlib, json
+import sys, getopt, os, signal, importlib, json, socket
 
 BASE_DIR = os.path.dirname(sys.argv[0])
 
@@ -248,6 +248,19 @@ class proxyd(dispatcher.dispatcher):
 
     def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
         self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, message)
+
+    def send_udp_msg_to_tunnel(self, user_id: bytes, saddr: tuple, daddr: tuple, message: bytes, is_ipv6=False):
+        if not self.__access.session_exists(user_id): return
+        if is_ipv6:
+            byte_saddr = socket.inet_pton(socket.AF_INET6, saddr[0])
+            byte_daddr = socket.inet_pton(socket.AF_INET6, daddr[0])
+        else:
+            byte_saddr = socket.inet_pton(socket.AF_INET, saddr[0])
+            byte_daddr = socket.inet_pton(socket.AF_INET, daddr[0])
+        self.proxy.udp_send(byte_saddr, byte_daddr, saddr[1], daddr[1], False, is_ipv6, 0, message)
+
+    def udp_del(self, user_id: bytes, address: tuple):
+        if not self.__access.session_exists(user_id): return
 
     def __config_gateway(self, subnet, prefix, eth_name):
         """ 配置IPV4网关

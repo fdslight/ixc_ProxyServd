@@ -11,6 +11,7 @@
 #include "../../../pywind/clib/netutils.h"
 
 static int ipv6_mtu=1280;
+static int ipv6_enable_udplite=0;
 
 void ipv6_handle(struct mbuf *m)
 {
@@ -34,8 +35,11 @@ void ipv6_handle(struct mbuf *m)
             static_nat_handle(m);
             break;
         case 17:
-        case 136:
             udp_handle(m,1);
+            break;
+        case 136:
+            if(ipv6_enable_udplite) udp_handle(m,1);
+            else mbuf_put(m);
             break;
         default:
             mbuf_put(m);

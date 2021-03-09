@@ -14,6 +14,7 @@
 #include "../../../pywind/clib/netutils.h"
 
 static int ip_mtu=1400;
+static int ip_enable_udplite=0;
 
 void ip_handle(struct mbuf *m)
 {
@@ -39,8 +40,10 @@ void ip_handle(struct mbuf *m)
         case 1:
         case 6:
         case 17:
-        case 136:
             is_supported=1;
+            break;
+        case 136:
+            if(ip_enable_udplite) is_supported=1;
             break;
         default:
             break;
