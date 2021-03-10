@@ -3,6 +3,7 @@ import pywind.lib.timer as timer
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.base_proto.utils as proto_utils
 
+
 class access(object):
     __timer = None
     __sessions = None
@@ -58,7 +59,7 @@ class access(object):
         """
         if self.session_exists(session_id): return
 
-        self.__sessions[session_id] = [fileno, username, address, priv_data, ]
+        self.__sessions[session_id] = [fileno, username, address, {}, priv_data]
         self.__timer.set_timeout(session_id, self.__SESSION_TIMEOUT)
         self.__dispatcher.tell_register_session(session_id)
         logging.print_general("add_session:%s" % username, address)
@@ -132,3 +133,19 @@ class access(object):
         :return:
         """
         pass
+
+    def udp_add(self, session_id: bytes, address: tuple, fileno: int):
+        _id = "%s-%s" % address
+        info = self.__sessions[session_id][3]
+        info[_id] = fileno
+
+    def udp_del(self, session_id: bytes, address: tuple):
+        _id = "%s-%s" % address
+        info = self.__sessions[session_id][3]
+        if _id in info: del info[_id]
+
+    def udp_get(self, session_id: bytes, address: tuple):
+        _id = "%s-%s" % address
+        info = self.__sessions[session_id][3]
+
+        return info.get(_id, -1)

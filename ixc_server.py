@@ -18,6 +18,7 @@ import pywind.lib.netutils as netutils
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
+import ixc_proxy.handlers.udp_client as udp_client
 import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
@@ -51,8 +52,6 @@ class proxyd(dispatcher.dispatcher):
 
     __proxy = None
 
-    __udp_conns = None
-
     @property
     def http_configs(self):
         configs = self.__configs.get("tunnel_over_http", {})
@@ -80,17 +79,19 @@ class proxyd(dispatcher.dispatcher):
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
                     is_ipv6: bool,
                     byte_data: bytes):
-        if _id not in self.__udp_conns:
-            self.__udp_conns[_id] = {}
-        o = self.__udp_conns[_id]
-
+        # 禁用UDPLite支持
         if is_udplite:
-            udp_id = "%s-%s-136" % (src_addr, sport,)
-        else:
-            udp_id = "%s-%s-17" % (src_addr, sport)
-
-        if udp_id not in o:
-            pass
+            return
+        if not self.__access.session_exists(_id): return
+        fd = self.__access.udp_get(_id, (src_addr, sport,))
+        if fd > 0:
+            self.get_handler(fd).send_msg(byte_data, (dst_addr, dport,))
+            return
+        fd = self.create_handler(-1, udp_client.client, _id, (src_addr, sport,), is_ipv6=is_ipv6)
+        if fd < 0:
+            logging.print_error("cannot create udp client")
+            return
+        self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
     def init_func(self, debug, configs):
         self.create_poll()
@@ -98,7 +99,6 @@ class proxyd(dispatcher.dispatcher):
         self.__configs = configs
         self.__debug = debug
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
-        self.__udp_conns = {}
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
@@ -215,7 +215,7 @@ class proxyd(dispatcher.dispatcher):
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
         # 此处找打用户的文件描述符以及IP地址
-        fileno, username, address, priv_data = self.__access.get_session_info()
+        fileno, username, address, udp_sessions, priv_data = self.__access.get_session_info()
 
         if not self.handler_exists(fileno): return
 
@@ -261,6 +261,7 @@ class proxyd(dispatcher.dispatcher):
 
     def udp_del(self, user_id: bytes, address: tuple):
         if not self.__access.session_exists(user_id): return
+        self.__access.udp_del(user_id, address)
 
     def __config_gateway(self, subnet, prefix, eth_name):
         """ 配置IPV4网关
