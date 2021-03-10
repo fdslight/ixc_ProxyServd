@@ -338,11 +338,6 @@ proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
     }
 
     subnet_calc_with_prefix(buf,prefix,is_ipv6,new_buf);
-
-    if(!is_ipv6){
-        PRINT_IP(" ",new_buf);
-    }
-
     ipalloc_subnet_set(new_buf,prefix,is_ipv6);
 
     Py_RETURN_TRUE;
