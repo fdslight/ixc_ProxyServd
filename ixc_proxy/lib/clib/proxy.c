@@ -332,9 +332,9 @@ proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
     }
 
     if(is_ipv6){
-        rs=inet_pton(AF_INET6,s,buf);
+        inet_pton(AF_INET6,s,buf);
     }else{
-        rs=inet_pton(AF_INET,s,buf);
+        inet_pton(AF_INET,s,buf);
     }
 
     subnet_calc_with_prefix(buf,prefix,is_ipv6,new_buf);
