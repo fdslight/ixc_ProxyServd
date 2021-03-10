@@ -23,6 +23,7 @@ void ip_handle(struct mbuf *m)
     int is_supported=0;
     unsigned short frag_info,frag_off;
     int mf,header_len=(header->ver_and_ihl & 0x0f) * 4;
+    int tot_len=ntohs(header->tot_len);
     
     // 检查是否是IPv6,如果是IPv6那么处理IPv6协议
     if(version==6){
@@ -31,7 +32,8 @@ void ip_handle(struct mbuf *m)
     }
 
     // 首先检查长度是否符合要求
-    if(m->tail-m->offset<=header_len){
+    if(m->tail-m->offset<tot_len){
+        DBG_FLAGS;
         mbuf_put(m);
         return;
     }
@@ -50,6 +52,7 @@ void ip_handle(struct mbuf *m)
     }
 
     if(!is_supported){
+        DBG_FLAGS;
         mbuf_put(m);
         return;
     }
@@ -60,10 +63,12 @@ void ip_handle(struct mbuf *m)
     frag_off=frag_info & 0x1fff;
     mf=frag_info & 0x2000;
     
+    DBG_FLAGS;
     // 如果IP数据包有分包那么首先合并数据包
     if(mf!=0 || frag_off!=0) m=ipunfrag_add(m);
     if(NULL==m) return;
     
+    DBG_FLAGS;
     switch(header->protocol){
         // 处理ICMP与TCP协议
         case 1:
