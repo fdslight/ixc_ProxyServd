@@ -124,13 +124,13 @@ static void static_nat_handle_v4(struct mbuf *m)
         static_nat_send_next_for_v4(m,header);
         return;
     }
-    DBG_FLAGS;
+    //DBG_FLAGS;
     if(r){
         rewrite_ip_addr(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v4(m,header);
         return;
     }
-    DBG_FLAGS;
+    //DBG_FLAGS;
     r=malloc(sizeof(struct static_nat_record));
     if(NULL==r){
         STDERR("cannot malloc struct static_nat_record\r\n");
