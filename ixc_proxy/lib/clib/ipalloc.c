@@ -162,7 +162,7 @@ int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
     }else{
         memcpy(ipalloc.ip_subnet,subnet,4);
 
-        PRINT_IP(" ",ipalloc.ip6_subnet);
+        PRINT_IP(" ",ipalloc.ip_subnet);
         memcpy(ipalloc.ip_mask,mask,4);
 
         ipalloc.isset_ip_subnet=1;
