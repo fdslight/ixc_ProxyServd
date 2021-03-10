@@ -94,7 +94,7 @@ static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *he
 static void static_nat_handle_v4(struct mbuf *m)
 {
     struct netutil_iphdr *header=(struct netutil_iphdr *)(m->data+m->offset);
-    struct static_nat_record *r;
+    struct static_nat_record *r=NULL;
     struct ipalloc_record *ip_record;
     struct time_data *tdata;
     char is_found;
@@ -114,7 +114,7 @@ static void static_nat_handle_v4(struct mbuf *m)
             return;
         }
     }
-    DBG_FLAGS;
+    //DBG_FLAGS;
     if(m->from==MBUF_FROM_WAN){
         r->up_time=time(NULL);
 
