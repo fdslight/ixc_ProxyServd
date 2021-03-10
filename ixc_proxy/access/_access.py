@@ -61,7 +61,6 @@ class access(object):
 
         self.__sessions[session_id] = [fileno, username, address, {}, priv_data]
         self.__timer.set_timeout(session_id, self.__SESSION_TIMEOUT)
-        self.__dispatcher.tell_register_session(session_id)
         logging.print_general("add_session:%s" % username, address)
 
     def get_session_info(self, session_id):
