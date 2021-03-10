@@ -71,10 +71,11 @@ class proxyd(dispatcher.dispatcher):
 
     def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int):
         # 如果数据来源于LAN那么发送到TUN设备
-        print(_id)
         if _from == proxy.FROM_LAN:
+            print("A")
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
             return
+        print("B")
         self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
 
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
