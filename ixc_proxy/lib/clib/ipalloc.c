@@ -28,12 +28,11 @@ static int ipalloc_addr_plus(unsigned char *address,int is_ipv6,unsigned char *r
         }else{
             if(x==count){
                 result[x]=result[x]+1;
-                break;
             }else{
                 result[x]=result[x]+flags;
-                rs=0;
-                break;
             }
+            rs=0;
+            break;
         }
     }
 
