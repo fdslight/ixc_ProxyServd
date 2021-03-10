@@ -33,7 +33,7 @@ void ip_handle(struct mbuf *m)
 
     // 首先检查长度是否符合要求
     if(m->tail-m->offset<tot_len){
-        DBG_FLAGS;
+        //DBG_FLAGS;
         mbuf_put(m);
         return;
     }
@@ -63,16 +63,17 @@ void ip_handle(struct mbuf *m)
     frag_off=frag_info & 0x1fff;
     mf=frag_info & 0x2000;
     
-    DBG_FLAGS;
+    //DBG_FLAGS;
     // 如果IP数据包有分包那么首先合并数据包
     if(mf!=0 || frag_off!=0) m=ipunfrag_add(m);
     if(NULL==m) return;
     
-    DBG_FLAGS;
+    //DBG_FLAGS;
     switch(header->protocol){
         // 处理ICMP与TCP协议
         case 1:
         case 6:
+            DBG_FLAGS;
             static_nat_handle(m);
             break;
         // 处理UDP和UDPLite协议
