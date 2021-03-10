@@ -23,6 +23,7 @@
 
 #include "../../../pywind/clib/sysloop.h"
 #include "../../../pywind/clib/netif/tuntap.h"
+#include "../../../pywind/clib/netutils.h"
 
 typedef struct{
     PyObject_HEAD
@@ -310,6 +311,38 @@ proxy_loop(PyObject *self,PyObject *args)
     Py_RETURN_TRUE;
 }
 
+static PyObject *
+proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
+{
+    const char *s;
+    unsigned char prefix;
+    unsigned char buf[256],new_buf[256];
+    int is_ipv6,rs;
+
+    if(!PyArg_ParseTuple(args,"sBp",&s,&prefix,&is_ipv6)) return NULL;
+
+    if(is_ipv6 && prefix>64){
+        STDERR("IPv6 prefix max must be 64\r\n");
+        Py_RETURN_FALSE;
+    }
+
+    if(!is_ipv6 && prefix>24){
+        STDERR("IP prefix max must be 24\r\n");
+        Py_RETURN_FALSE;
+    }
+
+    if(is_ipv6){
+        rs=inet_pton(AF_INET6,s,buf);
+    }else{
+        rs=inet_pton(AF_INET,s,buf);
+    }
+
+    subnet_calc_with_prefix(buf,prefix,is_ipv6,new_buf);
+    ipalloc_subnet_set(new_buf,prefix,is_ipv6);
+
+    Py_RETURN_TRUE;
+}
+
 static PyMemberDef proxy_members[]={
     {NULL}
 };
@@ -326,6 +359,8 @@ static PyMethodDef proxy_methods[]={
     {"tun_close",(PyCFunction)proxy_tun_close,METH_VARARGS,"close tun device"},
 
     {"loop",(PyCFunction)proxy_loop,METH_NOARGS,"do loop"},
+
+    {"ipalloc_subnet_set",(PyCFunction)proxy_ipalloc_subnet_set,METH_VARARGS,"set ipalloc subnet"},
     
     {NULL,NULL,0,NULL}
 };

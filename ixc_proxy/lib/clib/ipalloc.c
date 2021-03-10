@@ -68,6 +68,16 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
     unsigned char *addr_ptr=is_ipv6?ipalloc.ip6_cur:ipalloc.ip_cur;
     unsigned char *msk_ptr=is_ipv6?ipalloc.ip6_mask:ipalloc.ip_mask;
 
+    if(is_ipv6 && !ipalloc.isset_ip6_subnet){
+        STDERR("no set IPv6 subnet\r\n");
+        return NULL;
+    }
+
+    if(!is_ipv6 && !ipalloc.isset_ip_subnet){
+        STDERR("no set IP subnet\r\n");
+        return NULL;
+    }
+
     int rs=ipalloc_addr_plus(addr_ptr,is_ipv6,result);
     if(rs<0) return NULL;
     
