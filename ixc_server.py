@@ -74,6 +74,7 @@ class proxyd(dispatcher.dispatcher):
         if _from == proxy.FROM_LAN:
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
             return
+        print("ZZZZ")
         self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
 
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
@@ -225,14 +226,10 @@ class proxyd(dispatcher.dispatcher):
 
         # 此处检查是否是TCP,如果是TCP那么检查session id是否一致
         if self.get_handler(fileno).is_tcp():
-            print("BBB")
             session_id = self.get_handler(fileno).session_id
             if not session_id: return
-            print("CCC")
             if session_id != _id: return
-            print("DDD")
         if not self.__access.data_for_send(_id, len(message)): return
-        print("AAA")
         self.get_handler(fileno).send_msg(_id, address, action, message)
 
     def handle_msg_from_tunnel(self, fileno, session_id, address, action, message):
@@ -251,6 +248,7 @@ class proxyd(dispatcher.dispatcher):
             return
 
     def handle_ippkt_from_tundev(self, msg: bytes):
+        print(msg)
         self.proxy.netpkt_handle(bytes(16), msg, proxy.FROM_WAN)
 
     def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
