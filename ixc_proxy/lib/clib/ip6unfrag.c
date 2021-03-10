@@ -105,9 +105,10 @@ struct mbuf *ip6unfrag_add(struct mbuf *m)
     payload_len=ntohs(header->payload_len);
 
     // 生成一个唯一ID
-    memcpy(&key[0],header->src_addr,16);
-    memcpy(&key[16],header->dst_addr,16);
-    memcpy(&key[32],&(frag_header->id),4);
+    memcpy(key,m->id,16);
+    memcpy(&key[16],header->src_addr,16);
+    memcpy(&key[32],header->dst_addr,16);
+    memcpy(&key[48],&(frag_header->id),4);
 
     // 处理第一个分片
     if(frag_off==0){
@@ -144,6 +145,7 @@ struct mbuf *ip6unfrag_add(struct mbuf *m)
         new_mbuf->priv_data=tdata;
         new_mbuf->priv_flags=frag_header->id;
 
+        memcpy(new_mbuf->id,m->id,16);
     }else{
         new_mbuf=map_find(ip6unfrag.m,key,&is_found);
         // key不存在那么直接丢弃数据包

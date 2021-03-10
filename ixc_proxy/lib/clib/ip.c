@@ -38,6 +38,12 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    // 禁用WAN的UDP和UDPLite数据包
+    if(m->from==MBUF_FROM_WAN && (header->protocol==17 || header->protocol==136)){
+        mbuf_put(m);
+        return;
+    }
+
     switch(header->protocol){
         case 1:
         case 6:
@@ -64,10 +70,11 @@ void ip_handle(struct mbuf *m)
     mf=frag_info & 0x2000;
     
     //DBG_FLAGS;
-    // 如果IP数据包有分包那么首先合并数据包
-    if(mf!=0 || frag_off!=0) m=ipunfrag_add(m);
-    if(NULL==m) return;
-    
+    // 如果LAN IP数据包为UDP或者UDPlite分包那么首先合并数据包
+    if(m->from==MBUF_FROM_LAN && (header->protocol==17 || header->protocol==136)){
+        if(mf!=0 || frag_off!=0) m=ipunfrag_add(m);
+        if(NULL==m) return;
+    }
     //DBG_FLAGS;
     switch(header->protocol){
         // 处理ICMP与TCP协议

@@ -16,6 +16,8 @@ static int ipv6_enable_udplite=0;
 void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
+    struct netutil_ip6_frag_header *frag_header;
+    unsigned char next_header;
 
     if(m->tail-m->offset<41){
         mbuf_put(m);
@@ -24,12 +26,39 @@ void ipv6_handle(struct mbuf *m)
     
     m->is_ipv6=1;
 
-    m=ip6unfrag_add(m);
-    if(NULL==m) return;
-
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
+    next_header=header->next_header;
 
-    switch(header->next_header){
+    if(next_header==44 && m->from==MBUF_FROM_LAN){
+        if(m->tail-m->offset<48){
+            mbuf_put(m);
+            return;
+        }
+        frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
+        next_header=frag_header->next_header;
+
+        // 对UDP和UDPLite协议进行特殊处理用以支持cone nat
+        if(next_header==17 || next_header==136){
+            if(!ipv6_enable_udplite){
+                mbuf_put(m);
+                return;
+            }
+            m=ip6unfrag_add(m);
+            if(NULL==m) return;
+            udp_handle(m,1);
+        }else{
+            mbuf_put(m);
+        }
+        return;
+    }
+
+    // 禁止WAN的UDP和UDPLite数据包
+    if(m->from==MBUF_FROM_WAN && (next_header==17 || next_header==136)){
+        mbuf_put(m);
+        return;
+    }
+
+    switch(next_header){
         case 6:
         case 58:
             static_nat_handle(m);

@@ -90,7 +90,7 @@ struct mbuf *ipunfrag_add(struct mbuf *m)
     struct netutil_iphdr *header;
     int mf,rs,header_len;
     unsigned short frag_info,offset,tot_len;
-    char key[10],is_found;
+    char key[IPUNFRAG_KEYSIZE],is_found;
     struct time_data *tdata;
 
     if(!ipunfrag_is_initialized){
@@ -109,9 +109,10 @@ struct mbuf *ipunfrag_add(struct mbuf *m)
     offset=frag_info & 0x1fff;
     mf=frag_info & 0x2000;
     
-    memcpy(&key[0],header->src_addr,4);
-    memcpy(&key[4],header->dst_addr,4);
-    memcpy(&key[8],(char *)(&(header->id)),2);
+    memcpy(key,m->id,16);
+    memcpy(&key[16],header->src_addr,4);
+    memcpy(&key[20],header->dst_addr,4);
+    memcpy(&key[24],(char *)(&(header->id)),2);
 
     // 限制大小,避免缓冲区溢出
     if(offset * 8 > 0xff00){
@@ -172,6 +173,7 @@ struct mbuf *ipunfrag_add(struct mbuf *m)
         new_mbuf->priv_data=tdata;
         new_mbuf->priv_flags=header_len;
         
+        memcpy(new_mbuf->id,m->id,16);
     }
 
     new_mbuf->end=new_mbuf->tail;

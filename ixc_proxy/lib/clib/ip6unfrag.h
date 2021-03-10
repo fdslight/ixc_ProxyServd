@@ -4,7 +4,7 @@
 
 #include "../../../pywind/clib/map.h"
 
-#define IP6UNFRAG_KEYSIZE 36
+#define IP6UNFRAG_KEYSIZE 52
 struct ip6unfrag{
     struct map *m;
 };

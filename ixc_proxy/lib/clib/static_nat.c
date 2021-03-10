@@ -86,7 +86,6 @@ static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *he
         udp_handle(m,1);
         return;
     }
-
     netpkt_send(m);
 }
 
@@ -277,7 +276,7 @@ static void static_nat_handle_v6(struct mbuf *m)
         return;
     }
     
-    rs=map_add(static_nat.natv6_wan2lan,(char *)(header->dst_addr),r);
+    rs=map_add(static_nat.natv6_wan2lan,(char *)(ip_record->address),r);
     if(0!=rs){
         mbuf_put(m);
         free(r);

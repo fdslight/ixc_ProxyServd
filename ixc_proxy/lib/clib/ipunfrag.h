@@ -5,7 +5,7 @@
 
 #include "../../../pywind/clib/map.h"
 
-#define IPUNFRAG_KEYSIZE 10
+#define IPUNFRAG_KEYSIZE 26
 struct ipunfrag{
     struct map *m;
 };
