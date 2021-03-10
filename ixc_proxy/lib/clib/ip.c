@@ -73,7 +73,7 @@ void ip_handle(struct mbuf *m)
         // 处理ICMP与TCP协议
         case 1:
         case 6:
-            DBG_FLAGS;
+            //DBG_FLAGS;
             static_nat_handle(m);
             break;
         // 处理UDP和UDPLite协议
