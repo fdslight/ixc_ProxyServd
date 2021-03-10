@@ -120,6 +120,7 @@ class proxyd(dispatcher.dispatcher):
         crypto_configfile = "%s/ixc_configs/%s" % (BASE_DIR, conn_config["crypto_configfile"])
         try:
             self.__tcp_crypto = importlib.import_module(tcp_crypto)
+            print(self.__tcp_crypto)
             self.__udp_crypto = importlib.import_module(udp_crypto)
         except ImportError:
             print("cannot found tcp or udp crypto module")
