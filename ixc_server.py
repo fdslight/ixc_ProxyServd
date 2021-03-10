@@ -71,6 +71,7 @@ class proxyd(dispatcher.dispatcher):
 
     def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int):
         # 如果数据来源于LAN那么发送到TUN设备
+        print(_id)
         if _from == proxy.FROM_LAN:
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
             return
@@ -240,7 +241,6 @@ class proxyd(dispatcher.dispatcher):
             return
 
         if action == proto_utils.ACT_IPDATA:
-            print("zzzz")
             self.proxy.netpkt_handle(session_id, message, proxy.FROM_LAN)
             return
 
