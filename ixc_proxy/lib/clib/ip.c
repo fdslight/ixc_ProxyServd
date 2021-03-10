@@ -22,7 +22,7 @@ void ip_handle(struct mbuf *m)
     int version= (header->ver_and_ihl & 0xf0) >> 4;
     int is_supported=0;
     unsigned short frag_info,frag_off;
-    int mf,header_len=(header->ver_and_ihl & 0x0f) * 4;
+    int mf;
     int tot_len=ntohs(header->tot_len);
     
     // 检查是否是IPv6,如果是IPv6那么处理IPv6协议
