@@ -317,7 +317,7 @@ proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
     const char *s;
     unsigned char prefix;
     unsigned char buf[256],new_buf[256];
-    int is_ipv6,rs;
+    int is_ipv6;
 
     if(!PyArg_ParseTuple(args,"sBp",&s,&prefix,&is_ipv6)) return NULL;
 

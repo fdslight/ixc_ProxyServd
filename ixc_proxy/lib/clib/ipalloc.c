@@ -79,7 +79,9 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
     }
 
     int rs=ipalloc_addr_plus(addr_ptr,is_ipv6,result);
+    DBG_FLAGS;
     if(rs<0) return NULL;
+    DBG_FLAGS;
     
     // 检查IP地址是否还是属于当前的子网
     subnet_calc_with_msk(addr_ptr,msk_ptr,is_ipv6,subnet);
@@ -95,6 +97,7 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
         }
     }
 
+    DBG_FLAGS;
     r=malloc(sizeof(struct ipalloc_record));
     if(NULL==r){
         STDERR("no memory for malloc struct ipalloc_record\r\n");
