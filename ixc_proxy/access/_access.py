@@ -77,8 +77,8 @@ class access(object):
 
         self.__timer.drop(session_id)
         self.handle_close(session_id)
-        fileno, username, address, priv_data = self.__sessions[session_id]
-        self.__dispatcher.tell_unregister_session(session_id, fileno)
+        fileno, username, address, udp_conns, priv_data = self.__sessions[session_id]
+        self.__dispatcher.tell_unregister_session(session_id, fileno, udp_conns)
 
         logging.print_general("del_session:%s" % username, address)
         del self.__sessions[session_id]
