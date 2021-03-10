@@ -233,7 +233,7 @@ class proxyd(dispatcher.dispatcher):
         auth_ok = self.__access.data_from_recv(fileno, session_id, address, len(message))
         if not auth_ok: return
 
-        self.__access.modify_session(fileno, address)
+        self.__access.modify_session(session_id, fileno, address)
 
         if action == proto_utils.ACT_DNS:
             self.get_handler(self.__dns_fileno).send_msg(session_id, message)
