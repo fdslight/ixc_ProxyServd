@@ -372,8 +372,6 @@ def main():
     d = ""
     u = ""
 
-    enable_nat_module = False
-
     for k, v in opts:
         if k == "-d": d = v
         if k == "-u": u = v
