@@ -107,9 +107,9 @@ static void static_nat_handle_v4(struct mbuf *m)
         is_src=1;
         r=map_find(static_nat.natv4_lan2wan,key,&is_found);
     }else{
-        DBG_FLAGS;
+        //DBG_FLAGS;
         memcpy(key,header->dst_addr,4);
-        PRINT_IP("dest ",header->dst_addr);
+        //PRINT_IP("dest ",header->dst_addr);
         r=map_find(static_nat.natv4_wan2lan,key,&is_found);
 
         if(NULL==r){
@@ -171,7 +171,7 @@ static void static_nat_handle_v4(struct mbuf *m)
         return;
     }
     
-    rs=map_add(static_nat.natv4_wan2lan,(char *)(header->dst_addr),r);
+    rs=map_add(static_nat.natv4_wan2lan,(char *)(ip_record->address),r);
     if(0!=rs){
         mbuf_put(m);
         free(r);
