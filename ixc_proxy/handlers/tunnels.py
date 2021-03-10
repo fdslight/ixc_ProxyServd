@@ -107,6 +107,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
             return
 
         rdata = self.reader.read()
+        print(dir(self.__decrypt))
         self.__decrypt.input(rdata)
 
         while self.__decrypt.can_continue_parse():
