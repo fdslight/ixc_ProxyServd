@@ -109,9 +109,11 @@ static void static_nat_handle_v4(struct mbuf *m)
     }else{
         DBG_FLAGS;
         memcpy(key,header->dst_addr,4);
+        PRINT_IP("dest ",header->dst_addr);
         r=map_find(static_nat.natv4_wan2lan,key,&is_found);
 
         if(NULL==r){
+            DBG_FLAGS;
             mbuf_put(m);
             return;
         }
