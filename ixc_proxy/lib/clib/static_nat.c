@@ -107,6 +107,7 @@ static void static_nat_handle_v4(struct mbuf *m)
         is_src=1;
         r=map_find(static_nat.natv4_lan2wan,key,&is_found);
     }else{
+        DBG_FLAGS;
         memcpy(key,header->dst_addr,4);
         r=map_find(static_nat.natv4_wan2lan,key,&is_found);
 

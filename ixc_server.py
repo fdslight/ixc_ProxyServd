@@ -74,7 +74,6 @@ class proxyd(dispatcher.dispatcher):
         if _from == proxy.FROM_LAN:
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
             return
-        print("ZZZZ")
         self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
 
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
@@ -248,7 +247,6 @@ class proxyd(dispatcher.dispatcher):
             return
 
     def handle_ippkt_from_tundev(self, msg: bytes):
-        print(msg)
         self.proxy.netpkt_handle(bytes(16), msg, proxy.FROM_WAN)
 
     def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
