@@ -240,6 +240,7 @@ class proxyd(dispatcher.dispatcher):
             return
 
         if action == proto_utils.ACT_IPDATA:
+            print("zzzz")
             self.proxy.netpkt_handle(session_id, message, proxy.FROM_LAN)
             return
 
