@@ -92,6 +92,8 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
         }
     }else{
         if(memcmp(subnet,ipalloc.ip_subnet,4)){
+            PRINT_IP(" ",subnet);
+            PRINT_IP("subnet ",ipalloc.ip6_subnet);
             //DBG_FLAGS;
             return NULL;
         }
