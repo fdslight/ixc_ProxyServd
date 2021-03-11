@@ -79,7 +79,6 @@ class proxyd(dispatcher.dispatcher):
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
                     is_ipv6: bool,
                     byte_data: bytes):
-        print(dst_addr)
         # 禁用UDPLite支持
         if is_udplite:
             return
@@ -92,7 +91,7 @@ class proxyd(dispatcher.dispatcher):
         if fd < 0:
             logging.print_error("cannot create udp client")
             return
-        print((src_addr, sport,),(dst_addr,dport))
+        print(byte_data)
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
