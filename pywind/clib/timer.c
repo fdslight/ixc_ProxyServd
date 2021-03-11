@@ -204,9 +204,7 @@ void time_wheel_handle(struct time_wheel *time_wheel)
     //DBG("tick %d\r\n",tick_n);
 
     // 首先挪动tick,以便回调函数中能添加基于当前时间的超时
-    for(int n=0;n<=tick_n;n++) tick=tick->next;
-
-    DBG("%d\r\n",tick_n);
+    for(int n=0;n<tick_n;n++) tick=tick->next;
 
     if(tick_n>0) {
         time_wheel->old_time=now;
