@@ -268,9 +268,14 @@ class proxyd(dispatcher.dispatcher):
         self.__access.udp_del(user_id, address)
 
     def tell_unregister_session(self, user_id: bytes, fileno: int, udp_conns: dict):
-        if self.get_handler(fileno).is_tcp():
-            self.delete_handler(fileno)
-
+        # 此处需要检测fd被重用的情况
+        if self.handler_exists(fileno):
+            if self.get_handler(fileno).is_tcp():
+                session_id = self.get_handler(fileno).session_id
+                if session_id:
+                    if session_id == user_id: self.delete_handler(fileno)
+                ''''''
+            ''''''
         for fd in udp_conns:
             self.delete_handler(fd)
 
