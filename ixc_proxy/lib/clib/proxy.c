@@ -184,13 +184,6 @@ proxy_init(proxy_object *self,PyObject *args,PyObject *kwds)
 }
 
 static PyObject *
-ip2socks_myloop(PyObject *self,PyObject *args)
-{
-    sysloop_do();
-    Py_RETURN_NONE;
-}
-
-static PyObject *
 proxy_mtu_set(PyObject *self,PyObject *args)
 {
     int mtu,is_ipv6;

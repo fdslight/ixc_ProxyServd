@@ -36,7 +36,7 @@ class dns_client(udp_handler.udp_handler):
 
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
-        self.set_timeout(self.fileno, 10)
+        self.set_timeout(self.fileno, 5)
 
         return self.fileno
 
@@ -85,3 +85,10 @@ class dns_client(udp_handler.udp_handler):
         ]
         self.sendto(b"".join(_list), (self.__dns_server, 53))
         self.add_evt_write(self.fileno)
+
+    def udp_timeout(self):
+        dels = []
+        now = time.time()
+        for wan_dns_id in self.__map:
+            o = self.__map[wan_dns_id]
+            t = o["time"]

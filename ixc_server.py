@@ -211,7 +211,7 @@ class proxyd(dispatcher.dispatcher):
         if not io_wait:
             self.set_default_io_wait_time(0)
         else:
-            self.set_default_io_wait_time(10)
+            self.set_default_io_wait_time(5)
 
     @property
     def proxy(self):
