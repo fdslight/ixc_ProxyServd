@@ -79,6 +79,7 @@ class proxyd(dispatcher.dispatcher):
     def udp_recv_cb(self, _id: bytes, src_addr: str, dst_addr: str, sport: int, dport: int, is_udplite: bool,
                     is_ipv6: bool,
                     byte_data: bytes):
+        print(dst_addr)
         # 禁用UDPLite支持
         if is_udplite:
             return
