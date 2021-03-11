@@ -65,7 +65,6 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
 
 static void static_nat_sysloop_cb(struct sysloop *loop)
 {
-    DBG_FLAGS;
     time_wheel_handle(&static_nat_time_wheel);
 }
 
@@ -349,7 +348,7 @@ static void static_nat_timeout_cb(void *data)
             map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
             return;
         }
-
+        DBG_FLAGS;
         r->tdata=tdata;
         return;
     }
