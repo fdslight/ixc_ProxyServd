@@ -341,7 +341,6 @@ static PyMemberDef proxy_members[]={
 };
 
 static PyMethodDef proxy_methods[]={
-    {"myloop",(PyCFunction)ip2socks_myloop,METH_VARARGS,"loop call"},
     {"mtu_set",(PyCFunction)proxy_mtu_set,METH_VARARGS,"set mtu for IP and IPv6"},
 
     {"netpkt_handle",(PyCFunction)proxy_netpkt_handle,METH_VARARGS,"handle ip data packet"},

@@ -177,6 +177,9 @@ class proxyd(dispatcher.dispatcher):
         except KeyError:
             self.__ip6_mtu = 1280
 
+        self.proxy.mtu_set(self.__ip4_mtu, False)
+        self.proxy.mtu_set(self.__ip6_mtu, True)
+
         dns_addr = nat_config["dns"]
         if netutils.is_ipv6_address(dns_addr):
             is_ipv6 = True
