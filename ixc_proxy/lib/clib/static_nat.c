@@ -65,6 +65,7 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
 
 static void static_nat_sysloop_cb(struct sysloop *loop)
 {
+    DBG_FLAGS;
     time_wheel_handle(&static_nat_time_wheel);
 }
 
@@ -330,6 +331,8 @@ static void static_nat_timeout_cb(void *data)
     char key[32];
 
     memcpy(key,r->id,16);
+
+    DBG_FLAGS;
 
     if(r->is_ipv6){
         memcpy(&key[16],r->lan_addr1,16);
