@@ -92,3 +92,6 @@ class dns_client(udp_handler.udp_handler):
         for wan_dns_id in self.__map:
             o = self.__map[wan_dns_id]
             t = o["time"]
+            if now - t >= 3: dels.append(wan_dns_id)
+        for wan_dns_id in dels: del self.__map[wan_dns_id]
+        self.set_timeout(self.fileno, 5)
