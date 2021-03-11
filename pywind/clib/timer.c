@@ -196,11 +196,22 @@ void time_wheel_handle(struct time_wheel *time_wheel)
     unsigned int tick_n;
     time_t now=time(NULL);
     time_t v=now-time_wheel->old_time;
-    struct time_tick *tick=time_wheel->cur_tick;
+    struct time_tick *tick=time_wheel->cur_tick,*old_tick;
 
     tick_n=v/time_wheel->every_tick_timeout;
 
+    old_tick=tick;
     //DBG("tick %d\r\n",tick_n);
+
+    // 首先挪动tick,以便回调函数中能添加基于当前时间的超时
+    for(int n=0;n<=tick_n;n++) tick=tick->next;
+
+    if(tick_n>0) {
+        time_wheel->old_time=now;
+        time_wheel->cur_tick=tick;
+    }
+
+    tick=old_tick;
     for(int n=0;n<tick_n;n++){
         //DBG_FLAGS;
         time_wheel_timeout(time_wheel,tick->time_data);
@@ -209,9 +220,4 @@ void time_wheel_handle(struct time_wheel *time_wheel)
         tick=tick->next;
     }
 
-    // 这里tick_n大于0才能更新时间,否则tick将永远无法向前移动
-    if(tick_n>0) {
-        time_wheel->old_time=now;
-        time_wheel->cur_tick=tick;
-    }
 }
