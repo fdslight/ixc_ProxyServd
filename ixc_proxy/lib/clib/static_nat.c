@@ -331,7 +331,7 @@ static void static_nat_timeout_cb(void *data)
 
     memcpy(key,r->id,16);
 
-    DBG_FLAGS;
+    //DBG_FLAGS;
 
     if(r->is_ipv6){
         memcpy(&key[16],r->lan_addr1,16);
@@ -353,7 +353,7 @@ static void static_nat_timeout_cb(void *data)
         return;
     }
 
-    DBG_FLAGS;
+    PRINT_IP(" ",r->lan_addr1);
 
     map_del(m_lan2wan,key,static_nat_del_cb);
     map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
