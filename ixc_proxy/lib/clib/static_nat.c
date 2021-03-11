@@ -310,6 +310,7 @@ static void static_nat_del_cb(void *data)
     r->refcnt-=1;
 
     if(0==r->refcnt){
+        DBG_FLAGS;
         ipalloc_free(r->ip_record,r->is_ipv6);
         free(r);
         return;
