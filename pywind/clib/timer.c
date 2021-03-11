@@ -68,7 +68,7 @@ static struct time_tick *time_wheel_tick_get(struct time_wheel *time_wheel,time_
 
     n=tick->idx_no+n;
 
-    return tick;
+    return time_wheel->tick_idx[n];
 }
 
 

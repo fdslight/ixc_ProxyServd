@@ -348,7 +348,7 @@ static void static_nat_timeout_cb(void *data)
             map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
             return;
         }
-        DBG_FLAGS;
+        PRINT_IP(" ",r->lan_addr1);
         r->tdata=tdata;
         return;
     }
