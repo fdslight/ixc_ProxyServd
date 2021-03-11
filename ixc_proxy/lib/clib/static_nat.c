@@ -150,7 +150,7 @@ static void static_nat_handle_v4(struct mbuf *m)
         return;
     }
 
-    tdata=time_wheel_add(&static_nat_time_wheel,r,STATIC_NAT_TIMEOUT);
+    tdata=time_wheel_add(&static_nat_time_wheel,r,10);
 
     if(NULL==tdata){
         STDERR("cannot add to timer\r\n");
@@ -256,7 +256,7 @@ static void static_nat_handle_v6(struct mbuf *m)
         return;
     }
 
-    tdata=time_wheel_add(&static_nat_time_wheel,r,STATIC_NAT_TIMEOUT);
+    tdata=time_wheel_add(&static_nat_time_wheel,r,10);
 
     if(NULL==tdata){
         STDERR("cannot add to timer\r\n");
