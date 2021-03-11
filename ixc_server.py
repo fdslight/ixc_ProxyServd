@@ -92,6 +92,8 @@ class proxyd(dispatcher.dispatcher):
         if fd < 0:
             logging.print_error("cannot create udp client")
             return
+        print((src_addr, sport,),(dst_addr,dport))
+        self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
     def init_func(self, debug, configs):
