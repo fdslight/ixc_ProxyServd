@@ -42,7 +42,7 @@ class dns_client(udp_handler.udp_handler):
 
     def udp_readable(self, message, address):
         # 此处检查地址是否是DNS服务器
-        if address[0] != self.__dns_server[0]: return
+        if address[0] != self.__dns_server: return
         if address[1] != 53: return
         if len(message) < 8: return
 
