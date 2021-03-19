@@ -13,7 +13,7 @@
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
 
-static int ip_mtu=1400;
+static int ip_mtu=1500;
 static int ip_enable_udplite=0;
 
 void ip_handle(struct mbuf *m)
@@ -24,6 +24,12 @@ void ip_handle(struct mbuf *m)
     unsigned short frag_info,frag_off;
     int mf;
     int tot_len=ntohs(header->tot_len);
+
+    // 限制数据包最大长度
+    if(m->tail-m->offset>1500){
+        mbuf_put(m);
+        return;
+    }
     
     // 检查是否是IPv6,如果是IPv6那么处理IPv6协议
     if(version==6){
