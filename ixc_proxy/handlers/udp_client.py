@@ -39,7 +39,7 @@ class client(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
-        _id = "%s-%s" % address
+        _id = address[0]
         if _id not in self.__map: return
         self.dispatcher.send_udp_msg_to_tunnel(self.__user_id, address, self.__my_address, message,
                                                is_ipv6=self.__is_ipv6)
@@ -64,7 +64,7 @@ class client(udp_handler.udp_handler):
         self.close()
 
     def send_msg(self, message: bytes, address: tuple):
-        _id = "%s-%s" % address
+        _id = address[0]
         if _id not in self.__map:
             if self.__cur_conns == self.__max_conns: return
             self.__cur_conns += 1
