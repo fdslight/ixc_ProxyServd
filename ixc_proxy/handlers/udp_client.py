@@ -49,7 +49,7 @@ class client(udp_handler.udp_handler):
 
     def udp_timeout(self):
         now = time.time()
-        if now - self.__up_time < 180:
+        if now - self.__up_time < 120:
             self.set_timeout(self.fileno, 10)
             return
         self.dispatcher.udp_del(self.__user_id, self.__my_address)
