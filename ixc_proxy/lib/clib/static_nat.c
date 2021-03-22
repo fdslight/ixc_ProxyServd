@@ -119,8 +119,6 @@ static void static_nat_handle_v4(struct mbuf *m)
     }
     //DBG_FLAGS;
     if(m->from==MBUF_FROM_WAN){
-        r->up_time=time(NULL);
-
         memcpy(m->id,r->id,16);
         rewrite_ip_addr(header,r->lan_addr1,is_src);
 
@@ -129,6 +127,7 @@ static void static_nat_handle_v4(struct mbuf *m)
     }
     //DBG_FLAGS;
     if(r){
+        r->up_time-time(NULL);
         rewrite_ip_addr(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v4(m,header);
         return;
@@ -226,8 +225,6 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(m->from==MBUF_FROM_WAN){
-        r->up_time=time(NULL);
-
         memcpy(m->id,r->id,16);
         static_nat_rewrite_ip6(header,r->lan_addr1,is_src);
         static_nat_send_next_for_v6(m,header);
@@ -235,6 +232,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(r){
+        r->up_time=time(NULL);
         static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
@@ -281,7 +279,7 @@ static void static_nat_handle_v6(struct mbuf *m)
         mbuf_put(m);
         free(r);
         ipalloc_free(ip_record,1);
-        map_del(static_nat.natv4_lan2wan,key,NULL);
+        map_del(static_nat.natv6_lan2wan,key,NULL);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
         return;
@@ -348,12 +346,20 @@ static void static_nat_timeout_cb(void *data)
             map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
             return;
         }
-        PRINT_IP(" ",r->lan_addr1);
+        if(r->is_ipv6){
+            PRINT_IP6(" ",r->lan_addr1);
+        }else{
+            PRINT_IP(" ",r->lan_addr1);
+        }
         r->tdata=tdata;
         return;
     }
 
-    PRINT_IP(" ",r->lan_addr1);
+    if(r->is_ipv6){
+        PRINT_IP6(" ",r->lan_addr1);
+    }else{
+        PRINT_IP(" ",r->lan_addr1);
+    }
 
     map_del(m_lan2wan,key,static_nat_del_cb);
     map_del(m_wan2lan,(char *)r->lan_addr2,static_nat_del_cb);
