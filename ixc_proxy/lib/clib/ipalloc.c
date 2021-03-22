@@ -133,6 +133,8 @@ void ipalloc_free(struct ipalloc_record *record,int is_ipv6)
         return;
     }
 
+    record->next=NULL;
+    
     if(is_ipv6){
         record->next=ipalloc.empty_ip6_head;
         ipalloc.empty_ip6_head=record;
