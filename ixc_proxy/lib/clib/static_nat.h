@@ -9,7 +9,7 @@
 #include "../../../pywind/clib/map.h"
 #include "../../../pywind/clib/timer.h"
 
-#define STATIC_NAT_TIMEOUT 300
+#define STATIC_NAT_TIMEOUT 180
 
 struct static_nat_record{
     struct time_data *tdata;
