@@ -235,6 +235,7 @@ class proxyd(dispatcher.dispatcher):
             if not session_id: return
             if session_id != _id: return
         if not self.__access.data_for_send(_id, len(message)): return
+        if not self.get_handler(fileno).is_tunnel_handler(): return
         self.get_handler(fileno).send_msg(_id, address, action, message)
 
     def handle_msg_from_tunnel(self, fileno, session_id, address, action, message):

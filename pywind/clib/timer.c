@@ -38,6 +38,9 @@ static void time_data_put(struct time_wheel *time_wheel,struct time_data *data)
         return;
     }
 
+    data->next=NULL;
+    data->data=NULL;
+    
     data->next=time_wheel->empty_data_head;
     time_wheel->empty_data_head=data;
 }

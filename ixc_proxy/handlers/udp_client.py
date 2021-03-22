@@ -77,3 +77,6 @@ class client(udp_handler.udp_handler):
         """考虑隧道fd被重复使用的情况
         """
         return False
+
+    def is_tunnel_handler(self):
+        return False

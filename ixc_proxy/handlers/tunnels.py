@@ -122,11 +122,11 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
 
                 if action not in proto_utils.ACTS: continue
 
-                self.__session_id = session_id
-
                 if self.__session_id and self.__session_id != session_id:
                     self.delete_handler(self.fileno)
                     return
+
+                self.__session_id = session_id
 
                 if action == proto_utils.ACT_PONG: continue
                 if action == proto_utils.ACT_PING:
@@ -156,6 +156,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         logging.print_general("tcp_disconnect", self.__address)
 
     def send_msg(self, session_id, address, action, message):
+        if not self.__session_id: return
         # 检查session_id是否一致
         if session_id != self.__session_id: return
         # 如果流量加载在HTTP协议上并且没有握手成功那么丢弃数据包
@@ -253,6 +254,9 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     def is_tcp(self):
         return True
 
+    def is_tunnel_handler(self):
+        return True
+
 
 class udp_tunnel(udp_handler.udp_handler):
     def init_func(self, creator, address, crypto, crypto_configs, is_ipv6=False):
@@ -316,3 +320,6 @@ class udp_tunnel(udp_handler.udp_handler):
 
     def is_tcp(self):
         return False
+
+    def is_tunnel_handler(self):
+        return True
