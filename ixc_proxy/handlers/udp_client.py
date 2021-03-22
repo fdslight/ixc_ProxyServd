@@ -39,7 +39,6 @@ class client(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
-        print(message,address)
         _id = "%s-%s" % address
         if _id not in self.__map: return
         self.dispatcher.send_udp_msg_to_tunnel(self.__user_id, address, self.__my_address, message,
