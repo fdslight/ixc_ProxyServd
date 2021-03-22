@@ -249,7 +249,7 @@ static void static_nat_handle_v6(struct mbuf *m)
 
     bzero(r,sizeof(struct static_nat_record));
 
-    ip_record=ipalloc_alloc(0);
+    ip_record=ipalloc_alloc(1);
     if(NULL==ip_record){
         STDERR("cannot get new ip address\r\n");
         mbuf_put(m);
@@ -262,7 +262,7 @@ static void static_nat_handle_v6(struct mbuf *m)
         STDERR("cannot add to timer\r\n");
         mbuf_put(m);
         free(r);
-        ipalloc_free(ip_record,0);
+        ipalloc_free(ip_record,1);
         return;
     }
 
@@ -270,7 +270,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     if(0!=rs){
         mbuf_put(m);
         free(r);
-        ipalloc_free(ip_record,0);
+        ipalloc_free(ip_record,1);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
         return;
@@ -280,7 +280,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     if(0!=rs){
         mbuf_put(m);
         free(r);
-        ipalloc_free(ip_record,0);
+        ipalloc_free(ip_record,1);
         map_del(static_nat.natv4_lan2wan,key,NULL);
         tdata->is_deleted=1;
         STDERR("cannot add to map\r\n");
