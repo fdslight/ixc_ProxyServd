@@ -102,6 +102,13 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
 static void
 proxy_dealloc(proxy_object *self)
 {
+    sysloop_uninit();
+    
+    ip6unfrag_uninit();
+    ipunfrag_init();
+    static_nat_uninit();
+    ipalloc_uninit();
+
     mbuf_uninit();
 }
 
