@@ -30,7 +30,8 @@ static int __tuntap_create(char *name,int flags)
 	ifr.ifr_flags |= flags;
 
 	if (*name != '\0'){
-		strncpy(ifr.ifr_name, name, IFNAMSIZ);
+		strncpy(ifr.ifr_name, name, IFNAMSIZ-1);
+		ifr.ifr_name[IFNAMSIZ-1]='\0';
 	}else{
         STDERR("wrong tuntap_name\r\n");
         return -1;
