@@ -64,7 +64,6 @@ class client(udp_handler.udp_handler):
         self.close()
 
     def send_msg(self, message: bytes, address: tuple):
-        print(message,address)
         _id = "%s-%s" % address
         if _id not in self.__map:
             if self.__cur_conns == self.__max_conns: return
