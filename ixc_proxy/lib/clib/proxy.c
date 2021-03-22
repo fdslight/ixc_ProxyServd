@@ -343,6 +343,26 @@ proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
     Py_RETURN_TRUE;
 }
 
+static PyObject *
+proxy_clog_set(PyObject *self,PyObject *args)
+{
+    const char *stdout_path,*stderr_path;
+
+    if(!PyArg_ParseTuple(args,"ss",&stdout_path,&stderr_path)) return NULL;
+
+    if(freopen(stdout_path,"a+",stdout)==NULL){
+        STDERR("cannot set stdout\r\n");
+        return NULL;
+    }
+
+    if(freopen(stderr_path,"a+",stderr)==NULL){
+        STDERR("cannot set stderr\r\n");
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 static PyMemberDef proxy_members[]={
     {NULL}
 };
@@ -360,6 +380,8 @@ static PyMethodDef proxy_methods[]={
     {"loop",(PyCFunction)proxy_loop,METH_NOARGS,"do loop"},
 
     {"ipalloc_subnet_set",(PyCFunction)proxy_ipalloc_subnet_set,METH_VARARGS,"set ipalloc subnet"},
+
+    {"clog_set",(PyCFunction)proxy_clog_set,METH_VARARGS,"set C language log path"},
     
     {NULL,NULL,0,NULL}
 };

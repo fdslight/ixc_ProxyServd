@@ -208,6 +208,8 @@ class proxyd(dispatcher.dispatcher):
             sys.stdout = open(LOG_FILE, "a+")
             sys.stderr = open(ERR_FILE, "a+")
 
+            self.proxy.clog_set("/tmp/ixc_proxy_stdout.log", "/tmp/ixc_proxy_stderr.log")
+
     def myloop(self):
         self.__access.access_loop()
         io_wait = self.proxy.loop()
