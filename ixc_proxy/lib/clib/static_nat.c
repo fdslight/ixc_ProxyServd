@@ -301,10 +301,12 @@ static void static_nat_handle_v6(struct mbuf *m)
 
 static void static_nat_del_cb(void *data)
 {
+    DBG_FLAGS;
     struct static_nat_record *r=data;
     struct time_data *tdata=r->tdata;
-
+    DBG_FLAGS;
     if(NULL!=tdata) tdata->is_deleted=1;
+    DBG_FLAGS;
     r->refcnt-=1;
 
     if(0==r->refcnt){
@@ -352,6 +354,7 @@ static void static_nat_timeout_cb(void *data)
             PRINT_IP(" ",r->lan_addr1);
         }
         r->tdata=tdata;
+        DBG_FLAGS;
         return;
     }
 
