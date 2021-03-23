@@ -65,7 +65,9 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
 
 static void static_nat_sysloop_cb(struct sysloop *loop)
 {
+    DBG_FLAGS;
     time_wheel_handle(&static_nat_time_wheel);
+    DBG_FLAGS;
 }
 
 /// 发送到下一个IPv4节点处理
