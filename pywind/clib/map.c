@@ -1,236 +1,293 @@
+#include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<errno.h>
+
 #include "map.h"
+#include "debug.h"
 
-static int __map_node_new(struct map *map,struct map_node **node)
+/// 获取空的map node
+static struct map_node *__map_node_get(struct map *m)
 {
-    *node=malloc(sizeof(struct map_node));
-    if(NULL==(*node)) return ENOMEM;
+	struct map_node *node;
 
-    #ifdef DEBUG
-    map->__dbg_malloc_cnt+=1;
-    #endif
+	if(NULL!=m->empty_head){
+		node=m->empty_head;
+		m->empty_head=node->tmp;
+		node->tmp=NULL;
+	}else{
+		DBG("call malloc for struct map_node\r\n");
 
-    bzero(*node,sizeof(struct map_node));
+		node=malloc(sizeof(struct map_node));
 
-    return 0;
+		if(NULL==node) return NULL;
+
+		bzero(node,sizeof(struct map_node));
+		m->cur_alloc_num+=1;
+	}
+	return node;
+}
+
+/// 回收map node
+static void __map_node_put(struct map *m,struct map_node *node)
+{
+
+	//DBG_FLAGS;
+
+	if(m->cur_alloc_num>m->pre_alloc_num){
+		free(node);
+		m->cur_alloc_num-=1;
+		return;
+	}
+
+	bzero(node,sizeof(struct map_node));
+	node->tmp=m->empty_head;
+	m->empty_head=node;
 }
 
 
-static int  __map_list_add(struct map *map,struct map_node *node)
+int map_new(struct map **m,unsigned char length)
 {
-    struct __map_list *tmplist;
-    
-    tmplist=malloc(sizeof(struct __map_list));
+	struct map *t=malloc(sizeof(struct map));
+	struct map_node *root=NULL;
 
-    if(NULL==tmplist) return ENOMEM;
+	if(NULL==t){
+		STDERR("cannot malloc struct map\r\n");
+		return -1;
+	}
 
-    #ifdef DEBUG
-    map->__dbg_malloc_cnt+=1;
-    #endif
+	root=malloc(sizeof(struct map_node));
+	if(NULL==root){
+		STDERR("cannot malloc struct map_node\r\n");
+		free(t);
+		return -1;
+	}
 
-    bzero(tmplist,sizeof(struct __map_list));
-    
-    if(NULL==map->list_header){
-        map->list_header=tmplist;
-        map->list_end=tmplist;
-    }else{
-        tmplist->previous=map->list_end;
-        map->list_end->next=tmplist;
-        map->list_end=tmplist;
-    }
+	bzero(t,sizeof(struct map));
+	bzero(root,sizeof(struct map_node));
 
-    tmplist->node=node;
-    node->list=tmplist;
+	t->tree_root=root;
+	t->length=length;
 
-    return 0;
+	*m=t;
+
+	return 0;
 }
 
-static void __map_list_del(struct map *map,struct __map_list *list)
+void map_release(struct map *m,map_del_func_t fn)
 {
-    if(NULL==list->previous) map->list_header=list->next;
-    if(NULL==list->next) map->list_end=list->previous;
+	struct map_node *node,*t;
 
-    if(NULL!=list->previous && NULL!=list->next){
-        list->previous->next=list->next;
-        list->next->previous=list->previous;
-    }
-    
-    #ifdef DEBUG
-    map->__dbg_free_cnt+=1;
-    #endif
+	node=m->list_head;
 
-    free(list);
+	while(NULL!=node){
+		t=node->list_next;
+		if(NULL!=fn) fn(node->data);
+		free(node);
+		node=t;
+	}
+
+	node=m->empty_head;
+	while(NULL!=node){
+		t=node->tmp;
+		free(node);
+		node=t;
+	}
 }
 
-static void __map_delete(struct map *map,struct __map_list *list)
+int map_pre_alloc(struct map *m,unsigned int size)
 {
-    struct map_node *cur_node,*pre_node;
-    unsigned char key_v;
+	struct map_node *t;
+	int rs=0;
+	
+	for(int n=0;n<size;n++){
+		t=malloc(sizeof(struct map_node));
+		if(NULL==t){
+			rs=-1;
+			STDERR("cannot malloc struct map_node\r\n");
+			break;
+		}
+		bzero(t,sizeof(struct map_node));
+		t->tmp=m->empty_head;
+		m->empty_head=t;
+	}
 
-    cur_node=list->node;
+	m->pre_alloc_num=size;
+	m->cur_alloc_num=size;
 
-    while(NULL!=cur_node){
-        key_v=cur_node->key_v;
-        pre_node=cur_node->previous;
-
-        // root node
-        if(NULL==pre_node){
-            if(0==cur_node->slot_flags){
-                free(cur_node);
-                #ifdef DEBUG
-                map->__dbg_free_cnt+=1;
-                #endif
-                map->root=NULL;
-            }
-            break;
-        }
-
-        pre_node->refcnt[key_v]-=1;
-        
-        if(0==pre_node->refcnt[key_v]){
-                pre_node->next[key_v]=NULL;
-                pre_node->slot_flags-=1;
-        }
-
-        if(0==cur_node->slot_flags){
-            free(cur_node);
-
-            #ifdef DEBUG
-            map->__dbg_free_cnt+=1;
-            #endif
-        }
-
-        cur_node=pre_node;
-    }
-
+	return rs;
 }
 
-int map_new(struct map **map,map_ksize_t length)
+int map_add(struct map *m,const char *key,void *data)
 {
-    *map=malloc(sizeof(struct map));
-    if(NULL==*map) return -1;
-    
-    bzero(*map,sizeof(struct map));
+	unsigned char v;
+	char x,is_found;
+	struct map_node *node,*t,*tt,*tmp_list_head=NULL;
+	int rs=0;
 
-    (*map)->length=length;
-   
+	// 如果找到数据那么直接返回
+	map_find(m,key,&is_found);
+	if(is_found) return -1;
+	
+	node=m->tree_root;
+	for(int n=0;n<m->length;n++){
+		x=*key++;
+		v=(unsigned char)x;
+		t=node->next_nodes[v];
 
-    return 0;
+		if(NULL==t){
+			t=__map_node_get(m);
+			if(NULL==t){
+				rs=-1;
+				STDERR("cannot get struct map_node\r\n");
+				break;
+			}
+			t->key_v=v;
+			// 添加到list
+			if(NULL!=m->list_head){
+				m->list_head->list_prev=t;
+			//DBG_FLAGS;
+			}
+			t->list_next=m->list_head;
+			m->list_head=t;
+		}
+
+		node->next_nodes[v]=t;
+		t->tree_prev=node;
+
+		t->tmp=tmp_list_head;
+		tmp_list_head=t;
+
+		node=t;
+	}
+
+	if(0!=rs) return rs;
+	
+	// 所有引用计数加1
+	t=tmp_list_head;
+
+	while(NULL!=t){
+		t->refcnt+=1;
+		t=t->tmp;
+	}
+
+	// 所有引用计数加1
+	t=tmp_list_head;
+
+	// tmp置为NULL,避免其他函数使用此变量出现错误的内存访问
+	while(NULL!=t){
+		//DBG("%d\r\n",t->refcnt);
+		tt=t->tmp;
+		t->tmp=NULL;
+		t=tt;
+	}
+
+	m->tree_root->refcnt+=1;
+	m->tree_root->tmp=NULL;
+
+	node->is_data_node=1;
+	node->data=data;
+
+	//DBG("%d\r\n",m->tree_root);
+
+	return 0;
 }
 
-void map_release(struct map *map,map_del_func_t func)
+
+void map_del(struct map *m,const char *key,map_del_func_t fn)
 {
-    struct __map_list *list=map->list_header,*tmplist;
-    
-    while(NULL!=list){
-        
-        if(NULL!=func) func(list->node->data);
-        __map_delete(map,list);
-        tmplist=list;
-        list=list->next;
+	unsigned char v;
+	char x,is_found;
 
-        free(tmplist);
+	struct map_node *node=m->tree_root,*t,*tmp_list=NULL;
 
-        #ifdef DEBUG
-        map->__dbg_free_cnt+=1;
-        #endif
-    }
+	//DBG("%d\r\n",m->tree_root);
+	
+	//如没找到记录那么直接返回
+	t=map_find(m,key,&is_found);
+	if(!is_found) return;
+
+	if(NULL!=fn) fn(t);
+
+	// 首先进行反转,由下到上删除
+	for(int n=0;n<m->length;n++){
+		x=*key++;
+		v=(unsigned char)x;
+		
+		node=node->next_nodes[v];
+		node->tmp=tmp_list;
+		tmp_list=node;
+
+		//DBG("%d\r\n",m->tree_root);
+	}
+
+	//DBG("%d %d\r\n",m->tree_root,t);
+	// 所有引用计数减少1
+	node=tmp_list;
+
+	while(NULL!=node){
+		node->refcnt-=1;
+		if(node->refcnt!=0){
+			node=node->tmp;
+			continue;
+		}
+
+		// 引用计数为0那么删除该节点
+		// 首先把指向该节点的索引值置为NULL
+		node->tree_prev->next_nodes[node->key_v]=NULL;
+
+		// 解除关联
+		if(NULL!=node->list_next){
+			node->list_next->list_prev=node->list_prev;
+		}
+
+		if(NULL!=node->list_prev){
+			node->list_prev->list_next=node->list_next;
+		}else{
+			m->list_head=node->list_next;
+		}
+		
+		t=node->tmp;
+		__map_node_put(m,node);
+		node=t;
+	}
+	//DBG("%d\r\n",m->tree_root);
+	m->tree_root->refcnt-=1;
 }
 
-int map_add(struct map *map,const char *key,void *data)
+void *map_find(struct map *m,const char *key,char *is_found)
 {
-    struct map_node *tmp_node,*tmp_node_old,*root;
-    unsigned char key_v;
-    int rs=0;
+	struct map_node *node=m->tree_root;
+	unsigned char v;
+	char x;
 
-    root=map->root;
-    if(NULL==root){
-        rs=__map_node_new(map,&root);
-        if(rs) return ENOMEM;
-        map->root=root;
-    }
+	*is_found=0;
+	
+	for(int n=0;n<m->length;n++){
+		x=*key++;
+		v=(unsigned char)x;
 
-    tmp_node_old=root;
+		node=node->next_nodes[v];
+		if(NULL==node) break;
+	}
 
-    for(int n=0;n<map->length;n++){
-        key_v=*key++;
-        tmp_node=tmp_node_old->next[key_v];
+	if(NULL==node) return NULL;
 
-        if(NULL!=tmp_node){
-            tmp_node_old->refcnt[key_v]+=1;
-            tmp_node_old=tmp_node;
-            continue;
-        }
-        rs=__map_node_new(map,&tmp_node);
-        if(rs) return ENOMEM;
-        tmp_node_old->slot_flags+=1;
-        tmp_node_old->refcnt[key_v]+=1;
-        tmp_node->key_v=key_v;
-        tmp_node_old->next[key_v]=tmp_node;
-        tmp_node->previous=tmp_node_old;
-        tmp_node_old=tmp_node;
-    }
+	*is_found=1;
 
-    tmp_node->data=data;
-    rs=__map_list_add(map,tmp_node);
-
-    return rs;
+	return node->data;
 }
 
-void map_del(struct map *map,const char *key,map_del_func_t func)
+void map_each(struct map *m,map_each_func_t fn)
 {
-    unsigned char key_v=0;
-    struct map_node *tmpnode=map->root;
+	struct map_node *node=m->list_head;
 
-    for(int n=0;n<map->length;n++){
-        key_v=*key++;
-        tmpnode=tmpnode->next[key_v];
-        if(NULL==tmpnode) break;
-    }
-
-    if(NULL!=tmpnode){
-        if(NULL!=func) func(tmpnode->data);
-        __map_delete(map,tmpnode->list);
-        __map_list_del(map,tmpnode->list);
-    }
-
+	while(NULL!=node){
+		//DBG("%d\r\n",node->is_data_node);
+		if(node->is_data_node && NULL!=fn) fn(node->data);
+		node=node->list_next;
+		
+	}
 }
 
-void *map_find(struct map *map,const char *key,char *is_find)
-{
-    struct map_node *tmp_node;
-    unsigned char key_v;
-    void *data=NULL;
-    
 
-    *is_find=0;
-    tmp_node=map->root;
 
-    if(NULL==tmp_node) return NULL;
-
-    for(int n=0;n<map->length;n++){
-        key_v=*key++;
-        tmp_node=tmp_node->next[key_v];
-        if(NULL==tmp_node) break;
-    }
-
-    if(NULL!=tmp_node){
-        *is_find=1;
-        data=tmp_node->data;
-    }
-
-    return data;
-}
-
-void map_each(struct map *map,map_each_func_t func)
-{
-    struct __map_list *list=map->list_header,*tmplist;
-    
-    while(NULL!=list){
-        tmplist=list->next;
-        func(list->node->data);
-        list=tmplist;
-    }
-}
