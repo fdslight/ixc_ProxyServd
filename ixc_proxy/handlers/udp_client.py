@@ -20,8 +20,12 @@ class client(udp_handler.udp_handler):
         else:
             fa = socket.AF_INET
         s = socket.socket(fa, socket.SOCK_DGRAM)
-        if is_ipv6:
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        
+        if is_ipv6: 
+            s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            bind_addr=("::",0)
+        else:
+            bind_addr=("0.0.0.0",0)
 
         self.__max_conns = 32
         self.__cur_conns = 0
@@ -32,6 +36,8 @@ class client(udp_handler.udp_handler):
         self.__is_ipv6 = is_ipv6
 
         self.set_socket(s)
+        self.bind(bind_addr)
+        
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
         self.set_timeout(self.fileno, 10)
