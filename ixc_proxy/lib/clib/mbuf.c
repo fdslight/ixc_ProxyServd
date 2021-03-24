@@ -79,7 +79,7 @@ struct mbuf *mbuf_get(void)
         return NULL;
     }
 
-    STDERR("get mbuf from malloc\r\n");
+    DBG("get mbuf from malloc\r\n");
 
     m->next=NULL;
     m->priv_data=NULL;

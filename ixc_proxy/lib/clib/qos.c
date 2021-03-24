@@ -122,7 +122,7 @@ void qos_pop(void)
         netpkt_send(m);
 
         m=t;
-        // 如果数据未发生完毕,那么跳转到下一个
+        // 如果数据未发送完毕,那么跳转到下一个
         if(NULL!=m){
             slot_obj->mbuf_first=m;
             slot_old=slot_obj;
