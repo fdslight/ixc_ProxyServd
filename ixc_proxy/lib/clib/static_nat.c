@@ -5,6 +5,7 @@
 #include "static_nat.h"
 #include "udp.h"
 #include "proxy.h"
+#include "qos.h"
 
 #include "../../../pywind/clib/netutils.h"
 #include "../../../pywind/clib/sysloop.h"
@@ -78,7 +79,7 @@ static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *hea
         return;
     }
 
-    netpkt_send(m);
+    qos_add(m);
 }
 
 /// 发送到下一个IPv6节点处理
@@ -88,7 +89,8 @@ static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *he
         udp_handle(m,1);
         return;
     }
-    netpkt_send(m);
+
+    qos_add(m);
 }
 
 

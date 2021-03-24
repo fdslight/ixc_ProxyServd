@@ -118,7 +118,7 @@ void qos_pop(void)
 
         // 这里需要创建一个临时变量,防止其他节点修改m->next导致内存访问出现问题
         t=m->next;
-
+        
         netpkt_send(m);
 
         m=t;
