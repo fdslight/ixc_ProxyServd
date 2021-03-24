@@ -108,6 +108,8 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
     else udphdr->length=htons(length+8);
 
     if(is_ipv6){
+        m->is_ipv6=1;
+
         offset=m->begin-40;
         ps6_header=(struct netutil_ip6_ps_header *)(m->data+offset);
 
@@ -119,6 +121,8 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
         ps6_header->next_header=p;
         ps6_header->length=htons(length+8);
     }else{
+        m->is_ipv6=0;
+
         offset=m->begin-12;
         ps_header=(struct netutil_ip_ps_header *)(m->data+offset);
 

@@ -20,6 +20,7 @@
 #include "ip6unfrag.h"
 #include "static_nat.h"
 #include "ipalloc.h"
+#include "qos.h"
 
 #include "../../../pywind/clib/sysloop.h"
 #include "../../../pywind/clib/netif/tuntap.h"
@@ -102,13 +103,13 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
 static void
 proxy_dealloc(proxy_object *self)
 {
-    sysloop_uninit();
-    
+    qos_uninit();
     ip6unfrag_uninit();
     ipunfrag_init();
     static_nat_uninit();
     ipalloc_uninit();
 
+    sysloop_uninit();
     mbuf_uninit();
 }
 
@@ -129,6 +130,12 @@ proxy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     rs=sysloop_init();
     if(rs<0){
         STDERR("cannot init sysloop\r\n");
+        return NULL;
+    }
+
+    rs=qos_init();
+    if(rs<0){
+        STDERR("cannot init qos\r\n");
         return NULL;
     }
 
@@ -308,6 +315,11 @@ static PyObject *
 proxy_loop(PyObject *self,PyObject *args)
 {
     sysloop_do();
+
+    if(qos_have_data()){
+        Py_RETURN_FALSE;
+    }
+
     Py_RETURN_TRUE;
 }
 

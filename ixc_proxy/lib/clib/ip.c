@@ -9,6 +9,7 @@
 #include "proxy.h"
 #include "udp.h"
 #include "static_nat.h"
+#include "qos.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -152,7 +153,7 @@ int ip_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char protoc
         tot_size+=cur_slice_size;
         frag_off+=(cur_slice_size/8);
 
-        netpkt_send(m);
+        qos_add(m);
     }
     
     return rs;
