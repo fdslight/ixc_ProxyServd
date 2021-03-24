@@ -20,12 +20,12 @@ class client(udp_handler.udp_handler):
         else:
             fa = socket.AF_INET
         s = socket.socket(fa, socket.SOCK_DGRAM)
-        
-        if is_ipv6: 
+
+        if is_ipv6:
             s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-            bind_addr=("::",0)
+            bind_addr = ("::", 0)
         else:
-            bind_addr=("0.0.0.0",0)
+            bind_addr = ("0.0.0.0", 0)
 
         self.__max_conns = 32
         self.__cur_conns = 0
@@ -37,7 +37,7 @@ class client(udp_handler.udp_handler):
 
         self.set_socket(s)
         self.bind(bind_addr)
-        
+
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
         self.set_timeout(self.fileno, 10)
@@ -45,8 +45,10 @@ class client(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
+        print("AA", address)
         _id = "%s-%s" % address
         if _id not in self.__map: return
+        print("BB", address)
         self.dispatcher.send_udp_msg_to_tunnel(self.__user_id, address, self.__my_address, message,
                                                is_ipv6=self.__is_ipv6)
 
@@ -70,6 +72,7 @@ class client(udp_handler.udp_handler):
         self.close()
 
     def send_msg(self, message: bytes, address: tuple):
+        print("send", address)
         _id = "%s-%s" % address
         if _id not in self.__map:
             if self.__cur_conns == self.__max_conns: return
