@@ -18,11 +18,14 @@ struct ipalloc{
     unsigned char ip6_cur[16];
     unsigned char ip6_subnet[16];
     unsigned char ip6_mask[16];
+    unsigned char ip6_max[16];
 
     // 当前的IP地址
     unsigned char ip_cur[4];
     unsigned char ip_subnet[4];
     unsigned char ip_mask[4];
+    // 当前IP地址的最大子网
+    unsigned char ip_max[4];
     // 是否已经设置了IP子网
     int isset_ip_subnet;
     // 是否已经设置了IPv6子网

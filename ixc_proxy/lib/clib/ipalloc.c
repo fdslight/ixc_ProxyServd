@@ -9,6 +9,19 @@
 static struct ipalloc ipalloc;
 static int ipalloc_is_initialized=0;
 
+/// 计算该子网的IP地址的最大地址
+static int ipalloc_calc_addr_max(unsigned char *subnet,unsigned char *mask,int is_ipv6,unsigned char *result)
+{
+    int loop_count=is_ipv6?16:4;
+    unsigned char v;
+    for(int n=0;n<loop_count;n++){
+        v=*mask++;
+        v=~v;
+        result[n]=(subnet[n] | v);
+    }
+    return 0;
+}
+
 /// 对指定的IP地址加1
 static int ipalloc_addr_plus(unsigned char *address,int is_ipv6,unsigned char *result)
 {
@@ -36,6 +49,20 @@ static int ipalloc_addr_plus(unsigned char *address,int is_ipv6,unsigned char *r
         }
     }
 
+    // 此处检查IP地址是否达到最大地址,达到最大地址那么返回失败
+    // IP地址段的最后一个值不能被使用
+    if(0==rs){
+        if(is_ipv6){
+            if(!memcmp(result,ipalloc.ip6_max,16)){
+                rs=-1;
+            }
+        }else{
+            if(!memcmp(result,ipalloc.ip_max,4)){
+                rs=-1;
+            }
+        }
+    }
+    
     return rs;
 }
 
@@ -165,11 +192,15 @@ int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
         memcpy(ipalloc.ip6_cur,subnet,16);
         memcpy(ipalloc.ip6_mask,mask,16);
 
+        ipalloc_calc_addr_max(ipalloc.ip6_subnet,ipalloc.ip6_mask,1,ipalloc.ip6_max);
+
         ipalloc.isset_ip6_subnet=1;
     }else{
         memcpy(ipalloc.ip_subnet,subnet,4);
         memcpy(ipalloc.ip_cur,subnet,4);
         memcpy(ipalloc.ip_mask,mask,4);
+        
+        ipalloc_calc_addr_max(ipalloc.ip_subnet,ipalloc.ip_mask,0,ipalloc.ip_max);
 
         ipalloc.isset_ip_subnet=1;
     }
