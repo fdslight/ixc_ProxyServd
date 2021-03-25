@@ -463,3 +463,12 @@ void static_nat_handle(struct mbuf *m)
     if(m->is_ipv6) static_nat_handle_v6(m);
     else static_nat_handle_v4(m);
 }
+
+/// 把IP地址和用户绑定
+int static_nat_bind(unsigned char *address,unsigned char *id,int is_ipv6)
+{
+    
+
+
+    return 0;
+}
