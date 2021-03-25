@@ -108,6 +108,19 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
         STDERR("no set IP subnet\r\n");
         return NULL;
     }
+    
+    if(is_ipv6 && NULL!=ipallc.empty_ip6_head){
+        r=ipalloc.empty_ip6_head;
+        ipalloc.empty_ip6_head=r->next;
+        return r;
+    }
+    
+    if(!is_ipv6 && NULL!=ipalloc.empty_ip_head){
+        r=ipalloc.empty_ip_head;
+        ipalloc.empty_ip_head=r->next;
+        
+        return r;
+    }
 
     int rs=ipalloc_addr_plus(addr_ptr,is_ipv6,result);
     //DBG_FLAGS;
