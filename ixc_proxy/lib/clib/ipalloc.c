@@ -109,7 +109,7 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
         return NULL;
     }
     
-    if(is_ipv6 && NULL!=ipallc.empty_ip6_head){
+    if(is_ipv6 && NULL!=ipalloc.empty_ip6_head){
         r=ipalloc.empty_ip6_head;
         ipalloc.empty_ip6_head=r->next;
         ipalloc.free_record_num-=1;
