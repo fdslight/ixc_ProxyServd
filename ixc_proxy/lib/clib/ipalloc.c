@@ -112,13 +112,14 @@ struct ipalloc_record *ipalloc_alloc(int is_ipv6)
     if(is_ipv6 && NULL!=ipallc.empty_ip6_head){
         r=ipalloc.empty_ip6_head;
         ipalloc.empty_ip6_head=r->next;
+        ipalloc.free_record_num-=1;
         return r;
     }
     
     if(!is_ipv6 && NULL!=ipalloc.empty_ip_head){
         r=ipalloc.empty_ip_head;
         ipalloc.empty_ip_head=r->next;
-        
+        ipalloc.free_record_num-=1;
         return r;
     }
 
@@ -182,6 +183,7 @@ void ipalloc_free(struct ipalloc_record *record,int is_ipv6)
         record->next=ipalloc.empty_ip_head;
         ipalloc.empty_ip_head=record;
     }
+    ipalloc.free_record_num+=1;
 }
 
 int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
