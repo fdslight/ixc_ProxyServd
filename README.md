@@ -3,6 +3,9 @@ IP代理软件服务端for ixcsys
 # 软件配置(在ixc_configs目录下)
 config.ini 里的nat中eth_name必须要改成实际机器网口名，其他请根据需求根据注释更改
 
+# 日志路径
+/tmp目录下以ixc_开头的文件
+
 
 # 运行环境
 python3并且需要安装cryptography模块
