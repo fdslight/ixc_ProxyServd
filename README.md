@@ -8,7 +8,7 @@ config.ini 里的nat中eth_name必须要改成实际机器网口名，其他请�
 python3并且需要安装cryptography模块
 
 # ubuntu/debian安装环境配置
-sudo apt install python3-pip
+sudo apt install python3-pip  
 sudo pip3 install cryptography
 
 # 软件编译
