@@ -153,6 +153,7 @@ static void static_nat_handle_v4(struct mbuf *m)
         return;
     }
 
+    PRINT_IP("alloc IP address ",ip_record->address);
     tdata=time_wheel_add(&static_nat_time_wheel,r,10);
 
     if(NULL==tdata){
@@ -257,6 +258,8 @@ static void static_nat_handle_v6(struct mbuf *m)
         mbuf_put(m);
         return;
     }
+
+    PRINT_IP6("alloc IPv6 address ",ip_record->address);
 
     tdata=time_wheel_add(&static_nat_time_wheel,r,10);
 
