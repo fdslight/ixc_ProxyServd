@@ -83,11 +83,14 @@ static void tcp_session_data_timeout_cb(void *data)
         //DBG_FLAGS;
         tcp_send_from_buf(session);
         tcp_timer_update(tm_node,session->delay_ms);
+        return;
     }
 
     if(TCP_SENT_BUF(session)->used_size==0 && session->peer_sent_closed){
         DBG_FLAGS;
     }
+
+    tcp_timer_update(tm_node,session->delay_ms);
 }
 
 static void tcp_session_conn_timeout_cb(void *data)
