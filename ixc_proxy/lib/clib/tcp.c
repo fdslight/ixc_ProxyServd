@@ -237,6 +237,7 @@ static void tcp_send_data(struct tcp_session *session,unsigned short status,void
     m->offset=m->begin;
     m->tail=MBUF_BEGIN+hdr_len+data_size;
     m->end=m->tail;
+    m->from=MBUF_FROM_WAN;
 
     tcphdr=(struct netutil_tcphdr *)(m->data+m->begin);
     bzero(tcphdr,hdr_len);
