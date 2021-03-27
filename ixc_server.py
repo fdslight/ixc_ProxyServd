@@ -98,14 +98,13 @@ class proxyd(dispatcher.dispatcher):
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
     def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
-        print("A")
         if not self.__access.session_exists(uid): return
-        print("B")
         fd = self.create_handler(-1, tcp_client.tcp_client, uid, conn_id, (saddr, sport,), (daddr, dport),
                                  is_ipv6=is_ipv6)
         if fd < 0:
             self.proxy.tcp_close(conn_id, is_ipv6)
             return
+        self.__access.tcp_add(uid, conn_id, fd)
 
     def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
         if not self.__access.session_exists(uid): return
