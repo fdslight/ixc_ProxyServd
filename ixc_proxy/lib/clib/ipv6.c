@@ -66,6 +66,7 @@ void ipv6_handle(struct mbuf *m)
 
     switch(next_header){
         case 6:
+            DBG_FLAGS;
             tcp_handle(m,1);
             break;
         case 17:
