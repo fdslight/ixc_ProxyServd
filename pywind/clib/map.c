@@ -204,8 +204,9 @@ void map_del(struct map *m,const char *key,map_del_func_t fn)
 	
 	//如没找到记录那么直接返回
 	t=map_find(m,key,&is_found);
+	DBG_FLAGS;
 	if(!is_found) return;
-
+	DBG_FLAGS;
 	if(NULL!=fn) fn(t);
 
 	// 首先进行反转,由下到上删除
