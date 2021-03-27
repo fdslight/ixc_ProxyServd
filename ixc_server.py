@@ -18,7 +18,10 @@ import pywind.lib.netutils as netutils
 import ixc_proxy.handlers.dns_proxy as dns_proxy
 import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
+
 import ixc_proxy.handlers.udp_client as udp_client
+import ixc_proxy.handlers.tcp_client as tcp_client
+
 import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
@@ -96,12 +99,24 @@ class proxyd(dispatcher.dispatcher):
 
     def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
         if not self.__access.session_exists(uid): return
+        fd = self.create_handler(-1, tcp_client.tcp_client, uid, conn_id, (saddr, sport,), (daddr, dport),
+                                 is_ipv6=is_ipv6)
+        if fd < 0:
+            self.proxy.tcp_close(conn_id, is_ipv6)
+            return
 
     def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
         if not self.__access.session_exists(uid): return
+        fd = self.__access.tcp_get(uid, conn_id)
+        if fd < 0: return
+        self.get_handler(fd).send_msg(win_size, byte_data)
 
     def tcp_close_cb(self, uid: bytes, conn_id: bytes):
         if not self.__access.session_exists(uid): return
+        fd = self.__access.tcp_get(uid, conn_id)
+        if fd < 0: return
+        self.__access.tcp_del(uid, conn_id)
+        self.delete_handler(fd)
 
     def init_func(self, debug, configs):
         self.create_poll()
