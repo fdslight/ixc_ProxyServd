@@ -52,7 +52,7 @@ class tcp_client(tcp_handler.tcp_handler):
         if not self.is_conn_ok():
             self.__sent_buf.append(msg)
             return
-
+        self.__up_time = time.time()
         self.add_evt_write(self.fileno)
         self.writer.write(msg)
 
