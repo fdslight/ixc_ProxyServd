@@ -145,6 +145,7 @@ void tcp_timer_del(struct tcp_timer_node *node)
     // 如果设置了超时标志,那么释放内存
     if(node->timeout_flags){
         free(node);
+        DBG_FLAGS;
     }else{
         // 如果未超时那么设置为无效
         node->is_valid=1;
