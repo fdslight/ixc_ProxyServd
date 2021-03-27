@@ -75,8 +75,9 @@ static void tcp_session_del_cb(void *data)
 static void tcp_session_data_timeout_cb(void *data)
 {
     struct tcp_session *session=data;
+    DBG_FLAGS;
     struct tcp_timer_node *tm_node=session->data_tm_node;
-
+    DBG_FLAGS;
     // 如果发送缓冲区有数据那么发送数据
     if(TCP_SENT_BUF(session)->used_size!=0){
         //DBG_FLAGS;

@@ -187,7 +187,6 @@ void tcp_timer_do(void)
         tick=tick->next;
     }
 
-    DBG_FLAGS;
     // 此处更新tick head，以便超时函数里能够调用tcp_timer_update
     // 另外注意需要判断时间间隔是否低于单个tick时间,如果不加入判断那么tick永远无法向前移动
     if(NULL!=head){
@@ -195,7 +194,6 @@ void tcp_timer_do(void)
         tcp_timer.cur_idx_no=tick->idx_no;
         memcpy(&tcp_timer.up_time,&tv,sizeof(struct timeval));
     }
-    DBG_FLAGS;
 
     node=head;
     while(NULL!=node){
@@ -203,7 +201,6 @@ void tcp_timer_do(void)
         node->fn(node->data);
         node=t_node;
     }
-    DBG_FLAGS;
 }
 
 time_t tcp_timer_interval_calc(struct timeval *begin,struct timeval *end)
