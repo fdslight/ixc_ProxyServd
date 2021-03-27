@@ -20,7 +20,7 @@
 /// TCP KEEP ALIVE超时时间
 #define TCP_TIMEOUT_KEEP_ALIVE 120
 /// TCP FIN超时时间
-#define TCP_TIMEOUT_FIN 8
+#define TCP_TIMEOUT_FIN 4
 
 
 /// TCP状态

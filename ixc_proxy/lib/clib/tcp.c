@@ -113,11 +113,17 @@ static void tcp_session_conn_timeout_cb(void *data)
             tcp_session_close(session);
             return;
         }
-        DBG_FLAGS;
+        
+        // 如果缓冲区无数据那么也发送结束帧
+        if(session->tcp_st==TCP_ST_OK && TCP_SENT_BUF(session)->used_size==0){
+            session->tcp_st=TCP_ST_FIN_SND_WAIT;
+            tcp_send_data(session,TCP_FIN | TCP_ACK,NULL,0,NULL,0);
+        }
+
         tcp_timer_update(session->conn_tm_node,1000);
         return;
     }
-    
+
     //DBG_FLAGS;
     if(session->tcp_st==TCP_ST_OK){
         if(timeout>=TCP_TIMEOUT_KEEP_ALIVE*1000){
