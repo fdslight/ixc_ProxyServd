@@ -70,7 +70,7 @@ static void tcp_session_del_cb(void *data)
 
     tcp_sessions.conn_count-=1;
 
-    DBG("tcp connections %ld\r\n",tcp_sessions.conn_count);
+    DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
 
     free(session);
 }
