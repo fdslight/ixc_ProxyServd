@@ -169,10 +169,13 @@ void tcp_timer_do(void)
         DBG_FLAGS;
         while(NULL!=node){
             if(!node->is_valid){
+                DBG_FLAGS
                 t_node=node->next;
+                DBG_FLAGS;
                 free(node);
                 node=t_node;
             }else{
+                DBG_FLAGS;
                 node->timeout_flags=1;
                 // 这里可能在回调函数出现删除node情况,此处需要提前指向下一个node
                 t_node=node->next;
