@@ -452,6 +452,10 @@ proxy_loop(PyObject *self,PyObject *args)
         Py_RETURN_FALSE;
     }
 
+    if(tcp_conn_count_get()>0){
+        Py_RETURN_FALSE;
+    }
+
     Py_RETURN_TRUE;
 }
 

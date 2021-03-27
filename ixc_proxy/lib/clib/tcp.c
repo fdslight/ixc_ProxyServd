@@ -101,7 +101,7 @@ static void tcp_session_conn_timeout_cb(void *data)
     // 注意这段if代码要在最开始的位置
     if(session->tcp_st==TCP_ST_FIN_SND_WAIT || session->peer_sent_closed){
         //DBG_FLAGS;
-        if(timeout>TCP_TIMEOUT_FIN){
+        if(timeout>TCP_TIMEOUT_FIN*1000){
             DBG("TCP fin timeout\r\n");
             tcp_session_close(session);
             return;
@@ -113,7 +113,7 @@ static void tcp_session_conn_timeout_cb(void *data)
     
     //DBG_FLAGS;
     if(session->tcp_st==TCP_ST_OK){
-        if(timeout>=TCP_TIMEOUT_KEEP_ALIVE){
+        if(timeout>=TCP_TIMEOUT_KEEP_ALIVE*1000){
             DBG("TCP Keep alive timeout\r\n");
             tcp_session_close(session);
             return;
