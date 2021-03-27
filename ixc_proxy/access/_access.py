@@ -149,11 +149,14 @@ class access(object):
 
         return info.get(_id, -1)
 
-    def tcp_add(self, session_id: bytes, conn_id: bytes, is_ipv6=False):
-        pass
+    def tcp_add(self, session_id: bytes, conn_id: bytes, fileno: int):
+        tcp_conns = self.__sessions[session_id][4]
+        tcp_conns[conn_id] = fileno
 
     def tcp_del(self, session_id: bytes, conn_id: bytes):
-        pass
+        tcp_conns = self.__sessions[session_id][4]
+        if conn_id in tcp_conns: del tcp_conns[conn_id]
 
     def tcp_get(self, session_id: bytes, conn_id: bytes):
-        pass
+        tcp_conns = self.__sessions[session_id][4]
+        return tcp_conns.get(conn_id, -1)
