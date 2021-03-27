@@ -44,7 +44,6 @@ static time_t tcp_session_get_data_delay(struct tcp_session *session)
 static void tcp_session_close(struct tcp_session *session)
 {
     struct map *map=session->is_ipv6?tcp_sessions.sessions6:tcp_sessions.sessions;
-    DBG_FLAGS;
     map_del(map,(char *)session->id,tcp_session_del_cb);
 }
 
@@ -81,18 +80,14 @@ static void tcp_session_data_timeout_cb(void *data)
     struct tcp_timer_node *tm_node=session->data_tm_node;
 
     // 如果发送缓冲区有数据那么发送数据
-    if(TCP_SENT_BUF(session)->used_size!=0 && !session->my_sent_closed){
+    if(TCP_SENT_BUF(session)->used_size!=0){
         //DBG_FLAGS;
         tcp_send_from_buf(session);
         tcp_timer_update(tm_node,session->delay_ms);
         return;
     }
 
-    if(TCP_SENT_BUF(session)->used_size==0 && session->peer_sent_closed){
-        DBG_FLAGS;
-    }
-
-    tcp_timer_update(tm_node,session->delay_ms);
+    tcp_timer_update(tm_node,1000);
 }
 
 static void tcp_session_conn_timeout_cb(void *data)
@@ -373,12 +368,12 @@ static void tcp_session_syn(const char *session_id,unsigned char *saddr,unsigned
     session->is_ipv6=is_ipv6;
 
     if(is_ipv6) {
-        memcpy(session->id,session_id,36);
+        memcpy(session->id,session_id,52);
         memcpy(session->src_addr,saddr,16);
         memcpy(session->dst_addr,daddr,16);
 
     }else{
-        memcpy(session->id,session_id,12);
+        memcpy(session->id,session_id,28);
         memcpy(session->src_addr,saddr,4);
         memcpy(session->dst_addr,daddr,4);
     }
