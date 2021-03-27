@@ -36,4 +36,6 @@ void static_nat_uninit(void);
 
 void static_nat_handle(struct mbuf *m);
 
+int static_nat_bind(unsigned char *id,unsigned char *address,int is_ipv6);
+
 #endif

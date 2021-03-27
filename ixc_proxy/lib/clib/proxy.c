@@ -34,6 +34,13 @@ typedef struct{
 static PyObject *ip_sent_cb=NULL;
 /// UDP接收回调函数
 static PyObject *udp_recv_cb=NULL;
+/// TCP请求连接回调函数
+static PyObject *tcp_conn_ev_cb=NULL;
+/// TCP接收数据回调函数
+static PyObject *tcp_recv_cb=NULL;
+/// TCP关闭事件回调函数
+static PyObject *tcp_conn_close_cb=NULL;
+
 
 static void ixc_segfault_handle(int signum)
 {
@@ -98,6 +105,76 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
     Py_XDECREF(result);
 
     return 0; 
+}
+
+int netpkt_tcp_conn_ev(unsigned char *uid,unsigned char *session_id,unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsigned short dport,int is_ipv6)
+{
+    PyObject *arglist,*result;
+    char src_addr[512],dst_addr[512];
+    int fa;
+    int session_len=28;
+
+    if(NULL==tcp_conn_ev_cb){
+        STDERR("not set tcp connect callback functiopn\r\n");
+        return -1;
+    }
+
+    fa=is_ipv6?AF_INET6:AF_INET;
+    if(is_ipv6) session_len=52;
+
+    bzero(src_addr,512);
+    bzero(dst_addr,512);
+
+    inet_ntop(fa,saddr,src_addr,512);
+    inet_ntop(fa,daddr,dst_addr,512);
+
+    arglist=Py_BuildValue("(y#y#ssHHNNy#)",uid,16,session_id,session_len,src_addr,dst_addr,sport,dport,PyBool_FromLong(is_ipv6));
+    result=PyObject_CallObject(udp_recv_cb,arglist);
+ 
+    Py_XDECREF(arglist);
+    Py_XDECREF(result);
+
+    return 0;
+}
+
+int netpkt_tcp_recv(unsigned char *uid,unsigned char *session_id,int win_size,void *data,unsigned short payload_len,int is_ipv6)
+{
+    PyObject *arglist,*result;
+    int session_len=16;
+
+    if(NULL==tcp_recv_cb){
+        STDERR("not set tcp recv callback function\r\n");
+        return -1;
+    }
+    if(is_ipv6) session_len=52;
+
+    arglist=Py_BuildValue("(y#y#iy#)",uid,16,session_id,session_len,win_size,payload_len);
+    result=PyObject_CallObject(tcp_recv_cb,arglist);
+
+    Py_XDECREF(arglist);
+    Py_XDECREF(result);
+
+    return 0;
+}
+
+int netpkt_tcp_close_ev(unsigned char *uid,unsigned char *session_id,int is_ipv6)
+{
+    PyObject *arglist,*result;
+    int session_len=16;
+
+    if(NULL==tcp_conn_close_cb){
+        STDERR("not set tcp conn close callback function\r\n");
+        return -1;
+    }
+    if(is_ipv6) session_len=52;
+
+    arglist=Py_BuildValue("(y#y#)",uid,16,session_id,session_len);
+    result=PyObject_CallObject(tcp_conn_close_cb,arglist);
+
+    Py_XDECREF(arglist);
+    Py_XDECREF(result);
+
+    return 0;
 }
 
 static void
@@ -195,6 +272,13 @@ proxy_init(proxy_object *self,PyObject *args,PyObject *kwds)
     Py_INCREF(udp_recv_cb);   
 
     return 0;
+}
+
+/// TCP回调函数设置
+static PyObject *
+proxy_tcp_cb_fn_set(PyObject *self,PyObject *args)
+{
+    return NULL;
 }
 
 static PyObject *
@@ -380,6 +464,8 @@ static PyMemberDef proxy_members[]={
 };
 
 static PyMethodDef proxy_methods[]={
+    {"tcp_cb_fn_set",(PyCFunction)proxy_tcp_cb_fn_set,METH_VARARGS,"set tcp callback function"},
+
     {"mtu_set",(PyCFunction)proxy_mtu_set,METH_VARARGS,"set mtu for IP and IPv6"},
 
     {"netpkt_handle",(PyCFunction)proxy_netpkt_handle,METH_VARARGS,"handle ip data packet"},

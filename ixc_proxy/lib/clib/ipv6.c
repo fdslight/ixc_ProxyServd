@@ -6,6 +6,9 @@
 #include "udp.h"
 #include "proxy.h"
 #include "static_nat.h"
+#include "qos.h"
+#include "tcp.h"
+#include "ipalloc.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -16,52 +19,54 @@ static int ipv6_enable_udplite=0;
 void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
-    struct netutil_ip6_frag_header *frag_header;
     unsigned char next_header;
+
+    if(!ipalloc_isset_ip(1)){
+        mbuf_put(m);
+        return;
+    }
 
     if(m->tail-m->offset<41){
         mbuf_put(m);
         return;
     }
+
+    // 来自于WAN的数据包丢弃,NAT66通过应用层模拟
+    if(m->from==MBUF_FROM_WAN){
+        mbuf_put(m);
+        return;
+    }
     
     m->is_ipv6=1;
-
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
     next_header=header->next_header;
 
-    if(next_header==44 && m->from==MBUF_FROM_LAN){
-        if(m->tail-m->offset<48){
-            mbuf_put(m);
-            return;
-        }
-        frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
-        next_header=frag_header->next_header;
-
-        // 对UDP和UDPLite协议进行特殊处理用以支持cone nat
-        if(next_header==17 || next_header==136){
-            if(!ipv6_enable_udplite){
-                mbuf_put(m);
-                return;
-            }
-            m=ip6unfrag_add(m);
-            if(NULL==m) return;
-            udp_handle(m,1);
-        }else{
-            mbuf_put(m);
-        }
+    // 如果是同一个局域网那么相互发送
+    if(ipalloc_is_lan(header->dst_addr,1)){
+        static_nat_handle(m);
         return;
     }
 
-    // 禁止WAN的UDP和UDPLite数据包
-    if(m->from==MBUF_FROM_WAN && (next_header==17 || next_header==136)){
+    if(next_header==44){
+        if(m->tail-m->offset<49){
+            mbuf_put(m);
+            return;
+        }
+        m=ip6unfrag_add(m);
+    }
+    
+    if(NULL==m){
         mbuf_put(m);
         return;
     }
 
+    // 重组分片之后检查协议
+    header=(struct netutil_ip6hdr *)(m->data+m->offset);
+    next_header=header->next_header;
+
     switch(next_header){
         case 6:
-        case 58:
-            static_nat_handle(m);
+            tcp_handle(m,1);
             break;
         case 17:
             udp_handle(m,1);
@@ -170,7 +175,7 @@ int ipv6_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char prot
 
         header->payload_len=htons(data_size);
 
-        netpkt_send(m);
+        qos_add(m);
     }
 
     return rs;

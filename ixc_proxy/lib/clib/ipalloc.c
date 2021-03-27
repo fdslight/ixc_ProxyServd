@@ -222,3 +222,32 @@ int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6)
 
     return 0;
 }
+
+int ipalloc_is_lan(unsigned char *address,int is_ipv6)
+{
+    int size=is_ipv6?16:4;
+    unsigned char subnet[16];
+    unsigned char *ptr;
+
+    if(is_ipv6 && !ipalloc.isset_ip6_subnet) return 0;
+    if(!is_ipv6 && !ipalloc.isset_ip_subnet) return 0;
+
+    if(is_ipv6) {
+        ptr=ipalloc.ip6_subnet;
+        subnet_calc_with_msk(address,ipalloc.ip6_mask,1,subnet);
+    }else{
+        ptr=ipalloc.ip_subnet;
+        subnet_calc_with_msk(address,ipalloc.ip_mask,0,subnet);
+    }
+
+    if(!memcmp(ptr,subnet,size)) return 1;
+
+    return 0;
+}
+
+inline
+int ipalloc_isset_ip(int is_ipv6)
+{
+    if(is_ipv6) return ipalloc.isset_ip_subnet;
+    return ipalloc.isset_ip_subnet;
+}

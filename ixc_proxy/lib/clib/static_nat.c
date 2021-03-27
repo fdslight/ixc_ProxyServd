@@ -468,10 +468,7 @@ void static_nat_handle(struct mbuf *m)
 }
 
 /// 把IP地址和用户绑定
-int static_nat_bind(unsigned char *address,unsigned char *id,int is_ipv6)
+int static_nat_bind(unsigned char *id,unsigned char *address,int is_ipv6)
 {
-    
-
-
     return 0;
 }

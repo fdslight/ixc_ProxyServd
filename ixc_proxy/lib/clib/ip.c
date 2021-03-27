@@ -26,6 +26,12 @@ void ip_handle(struct mbuf *m)
     int mf;
     int tot_len=ntohs(header->tot_len);
 
+    // 未设置IP地址丢弃数据包
+    if(!ipalloc_isset_ip(0)){
+        mbuf_put(m);
+        return;
+    }
+
     // 限制数据包最大长度
     if(m->tail-m->offset>1500){
         mbuf_put(m);
@@ -42,6 +48,14 @@ void ip_handle(struct mbuf *m)
     if(m->tail-m->offset<tot_len){
         //DBG_FLAGS;
         mbuf_put(m);
+        return;
+    }
+
+    m->is_ipv6=0;
+
+    // 如果实在同一个网段那么就直接进行NAT处理
+    if(ipalloc_is_lan(header->dst_addr,0)){
+        static_nat_handle(m);
         return;
     }
 
@@ -69,8 +83,6 @@ void ip_handle(struct mbuf *m)
         mbuf_put(m);
         return;
     }
-
-    m->is_ipv6=0;
 
     frag_info=ntohs(header->frag_info);
     frag_off=frag_info & 0x1fff;

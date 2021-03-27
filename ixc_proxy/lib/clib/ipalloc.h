@@ -43,4 +43,10 @@ void ipalloc_free(struct ipalloc_record *record,int is_ipv6);
 /// 子网设置
 int ipalloc_subnet_set(unsigned char *subnet,unsigned char prefix,int is_ipv6);
 
+/// 检查是否在同一个局域网
+int ipalloc_is_lan(unsigned char *address,int is_ipv6);
+
+/// 检查IP是否被设置
+int ipalloc_isset_ip(int is_ipv6);
+
 #endif
