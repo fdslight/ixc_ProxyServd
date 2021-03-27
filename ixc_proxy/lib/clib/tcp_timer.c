@@ -164,18 +164,13 @@ void tcp_timer_do(void)
     tot=ms / tcp_timer.tick_timeout;
 
     for(int n=0;n<tot;n++){
-        DBG_FLAGS;
         node=tick->head;
-        DBG_FLAGS;
         while(NULL!=node){
             if(!node->is_valid){
-                DBG_FLAGS;
                 t_node=node->next;
-                DBG_FLAGS;
                 free(node);
                 node=t_node;
             }else{
-                DBG_FLAGS;
                 node->timeout_flags=1;
                 // 这里可能在回调函数出现删除node情况,此处需要提前指向下一个node
                 t_node=node->next;
@@ -184,7 +179,6 @@ void tcp_timer_do(void)
                 head=node;
 
                 node=t_node;
-                DBG_FLAGS;
             }
         }
         //DBG_FLAGS;
@@ -201,6 +195,7 @@ void tcp_timer_do(void)
         tcp_timer.cur_idx_no=tick->idx_no;
         memcpy(&tcp_timer.up_time,&tv,sizeof(struct timeval));
     }
+    DBG_FLAGS;
 
     node=head;
     while(NULL!=node){
@@ -208,6 +203,7 @@ void tcp_timer_do(void)
         node->fn(node->data);
         node=t_node;
     }
+    DBG_FLAGS;
 }
 
 time_t tcp_timer_interval_calc(struct timeval *begin,struct timeval *end)
