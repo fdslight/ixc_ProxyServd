@@ -168,7 +168,7 @@ void tcp_timer_do(void)
         while(NULL!=node){
             if(!node->is_valid){
                 t_node=node->next;
-                free(node);
+                ex_free(node);
                 node=t_node;
             }else{
                 node->timeout_flags=1;

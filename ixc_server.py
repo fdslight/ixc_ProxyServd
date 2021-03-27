@@ -101,7 +101,7 @@ class proxyd(dispatcher.dispatcher):
         print(win_size, byte_data)
 
     def tcp_close_cb(self, uid: bytes, conn_id: bytes):
-        print("close tcp ", uid, conn_id)
+        print("close tcp ")
 
     def init_func(self, debug, configs):
         self.create_poll()
