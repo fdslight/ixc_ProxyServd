@@ -41,7 +41,7 @@ static time_t tcp_session_get_data_delay(struct tcp_session *session)
     return delay;
 }
 
-static void tScp_session_close(struct tcp_session *session)
+static void tcp_session_close(struct tcp_session *session)
 {
     struct map *map=session->is_ipv6?tcp_sessions.sessions6:tcp_sessions.sessions;
 
