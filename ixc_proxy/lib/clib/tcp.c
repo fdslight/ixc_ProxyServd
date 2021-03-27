@@ -23,9 +23,7 @@ static void tcp_send_rst(struct tcp_session *session);
 
 static void tcp_sysloop_cb(struct sysloop *loop)
 {
-    DBG_FLAGS;
     tcp_timer_do();
-    DBG_FLAGS;
 }
 
 /// 获取数据传输延迟,单位是ms

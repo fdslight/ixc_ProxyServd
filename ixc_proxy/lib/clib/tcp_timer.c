@@ -125,14 +125,13 @@ struct tcp_timer_node *tcp_timer_add(time_t timeout_ms,tcp_timer_cb_t fn,void *d
 
 void tcp_timer_update(struct tcp_timer_node *node,time_t timeout_ms)
 {
-    struct tcp_timer_tick *tick=node->tick;
+    struct tcp_timer_tick *tick;
 
     if(timeout_ms/1000 > tcp_timer.timeout_max){
         STDERR("cannot update time,the value is too large %ld\r\n",timeout_ms);
         return;
     }
 
-    
     node->timeout_flags=0;
     tick=tcp_timer_get_tick(timeout_ms);
 
@@ -147,7 +146,7 @@ void tcp_timer_del(struct tcp_timer_node *node)
         free(node);
     }else{
         // 如果未超时那么设置为无效
-        node->is_valid=1;
+        node->is_valid=0;
     }
 }
 
