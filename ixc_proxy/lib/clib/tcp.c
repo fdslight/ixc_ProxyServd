@@ -509,6 +509,9 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
 static void tcp_session_fin(struct tcp_session *session,struct netutil_tcphdr *tcphdr,struct mbuf *m)
 {
     session->peer_sent_closed=1;
+    session->peer_seq+=1;
+    
+    tcp_send_data(session,TCP_ACK,NULL,0,NULL,0);
 }
 
 static void tcp_session_rst(const char *session_id,unsigned char *saddr,unsigned char *daddr,struct netutil_tcphdr *tcphdr,int is_ipv6,struct mbuf *m)
