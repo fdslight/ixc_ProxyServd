@@ -98,10 +98,10 @@ class proxyd(dispatcher.dispatcher):
         print(uid, conn_id, saddr, daddr, sport, dport, is_ipv6)
 
     def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
-        pass
+        print(win_size, byte_data)
 
     def tcp_close_cb(self, uid: bytes, conn_id: bytes):
-        pass
+        print("close tcp ", uid, conn_id)
 
     def init_func(self, debug, configs):
         self.create_poll()
