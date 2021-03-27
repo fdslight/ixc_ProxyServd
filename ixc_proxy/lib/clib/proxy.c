@@ -150,7 +150,7 @@ int netpkt_tcp_recv(unsigned char *uid,unsigned char *session_id,int win_size,vo
     }
     if(is_ipv6) session_len=52;
 
-    arglist=Py_BuildValue("(y#y#iy#)",uid,16,session_id,session_len,win_size,payload_len);
+    arglist=Py_BuildValue("(y#y#iy#)",uid,16,session_id,session_len,win_size,data,payload_len);
     result=PyObject_CallObject(tcp_recv_cb,arglist);
 
     Py_XDECREF(arglist);
