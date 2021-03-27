@@ -509,7 +509,9 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
 
 static void tcp_session_fin(struct tcp_session *session,struct netutil_tcphdr *tcphdr,struct mbuf *m)
 {
+    DBG_FLAGS;
     session->peer_sent_closed=1;
+    DBG_FLAGS;
     //session->peer_seq+=1;
     // 如果缓冲区没有数据那么直接发送ACK
     if(TCP_SENT_BUF(session)->used_size==0) tcp_send_data(session,TCP_ACK,NULL,0,NULL,0);
@@ -599,19 +601,16 @@ static void tcp_session_handle(unsigned char *saddr,unsigned char *daddr,struct 
     tcphdr->win_size=ntohs(tcphdr->win_size);
 
     m->offset+=hdr_len;
-    DBG_FLAGS;
+    
     if(rst){
         tcp_session_rst(key,saddr,daddr,tcphdr,is_ipv6,m);
-        DBG_FLAGS;
         return;
     }
     if(syn){
         tcp_session_syn(key,saddr,daddr,tcphdr,hdr_len,is_ipv6,m);
-        DBG_FLAGS;
         return;
     }
     r=tcp_session_ack(session,tcphdr,m);
-    DBG_FLAGS;
     if(fin && r) tcp_session_fin(session,tcphdr,m);
     // ack和fin的处理不自动回收mbuf
     mbuf_put(m);
