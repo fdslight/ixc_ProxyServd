@@ -59,23 +59,17 @@ static void tcp_session_fin_wait_set(struct tcp_session *session)
 static void tcp_session_del_cb(void *data)
 {
     struct tcp_session *session=data;
-    DBG_FLAGS;
     // 发送一次RST数据包,确保TCP被停止
     tcp_send_rst(session);
-    DBG_FLAGS;
     netpkt_tcp_close_ev(session->uid,session->id,session->is_ipv6);
 
     if(NULL!=session->data_tm_node) tcp_timer_del(session->data_tm_node);
-    DBG_FLAGS;
     if(NULL!=session->conn_tm_node) tcp_timer_del(session->conn_tm_node);
-    DBG_FLAGS;
 
+    DBG_FLAGS;
     tcp_sessions.conn_count-=1;
-
    //DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
-    DBG_FLAGS;
     free(session);
-    DBG_FLAGS;
 }
 
 static void tcp_session_data_timeout_cb(void *data)
