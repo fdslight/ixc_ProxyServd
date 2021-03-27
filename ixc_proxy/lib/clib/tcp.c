@@ -66,10 +66,10 @@ static void tcp_session_del_cb(void *data)
     if(NULL!=session->data_tm_node) tcp_timer_del(session->data_tm_node);
     if(NULL!=session->conn_tm_node) tcp_timer_del(session->conn_tm_node);
 
-    DBG_FLAGS;
     tcp_sessions.conn_count-=1;
-   //DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
+    DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
     free(session);
+    DBG_FLAGS;
 }
 
 static void tcp_session_data_timeout_cb(void *data)
