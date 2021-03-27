@@ -84,6 +84,10 @@ static void tcp_session_data_timeout_cb(void *data)
         tcp_send_from_buf(session);
         tcp_timer_update(tm_node,session->delay_ms);
     }
+
+    if(TCP_SENT_BUF(session)->used_size==0 && session->peer_sent_closed){
+        DBG_FLAGS;
+    }
 }
 
 static void tcp_session_conn_timeout_cb(void *data)
@@ -502,7 +506,6 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
 static void tcp_session_fin(struct tcp_session *session,struct netutil_tcphdr *tcphdr,struct mbuf *m)
 {
     session->peer_sent_closed=1;
-    DBG_FLAGS;
 }
 
 static void tcp_session_rst(const char *session_id,unsigned char *saddr,unsigned char *daddr,struct netutil_tcphdr *tcphdr,int is_ipv6,struct mbuf *m)

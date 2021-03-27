@@ -28,8 +28,6 @@ enum{
     // SYN已经发送
     TCP_ST_SYN_SND=1,
     TCP_ST_OK,
-    // 对端关闭了FIN
-    TCP_ST_FIN_PEER,
     // 发送FIN发送等待
     TCP_ST_FIN_SND_WAIT
 };
