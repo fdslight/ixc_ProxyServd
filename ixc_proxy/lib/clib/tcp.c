@@ -44,8 +44,9 @@ static time_t tcp_session_get_data_delay(struct tcp_session *session)
 static void tcp_session_close(struct tcp_session *session)
 {
     struct map *map=session->is_ipv6?tcp_sessions.sessions6:tcp_sessions.sessions;
-
+    DBG_FLAGS;
     map_del(map,(char *)session->id,tcp_session_del_cb);
+    DBG_FLAGS;
 }
 
 static void tcp_session_fin_wait_set(struct tcp_session *session)
@@ -60,7 +61,6 @@ static void tcp_session_fin_wait_set(struct tcp_session *session)
 static void tcp_session_del_cb(void *data)
 {
     struct tcp_session *session=data;
-    
     DBG_FLAGS;
     // 发送一次RST数据包,确保TCP被停止
     tcp_send_rst(session);
