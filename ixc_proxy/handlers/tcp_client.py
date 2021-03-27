@@ -44,7 +44,6 @@ class tcp_client(tcp_handler.tcp_handler):
         return
 
     def send_msg(self, win_size: int, msg: bytes):
-        print(msg)
         if not self.is_conn_ok():
             self.__sent_buf.append(msg)
             return
