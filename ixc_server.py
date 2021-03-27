@@ -95,7 +95,7 @@ class proxyd(dispatcher.dispatcher):
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
     def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
-        print(uid, conn_id, saddr, daddr, sport, dport, is_ipv6)
+        pass
 
     def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
         print(win_size, byte_data)
