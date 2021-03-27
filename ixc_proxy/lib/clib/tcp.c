@@ -75,9 +75,8 @@ static void tcp_session_del_cb(void *data)
 static void tcp_session_data_timeout_cb(void *data)
 {
     struct tcp_session *session=data;
-    DBG_FLAGS;
     struct tcp_timer_node *tm_node=session->data_tm_node;
-    DBG_FLAGS;
+
     // 如果发送缓冲区有数据那么发送数据
     if(TCP_SENT_BUF(session)->used_size!=0){
         //DBG_FLAGS;
@@ -600,16 +599,19 @@ static void tcp_session_handle(unsigned char *saddr,unsigned char *daddr,struct 
     tcphdr->win_size=ntohs(tcphdr->win_size);
 
     m->offset+=hdr_len;
-
+    DBG_FLAGS;
     if(rst){
         tcp_session_rst(key,saddr,daddr,tcphdr,is_ipv6,m);
+        DBG_FLAGS;
         return;
     }
     if(syn){
         tcp_session_syn(key,saddr,daddr,tcphdr,hdr_len,is_ipv6,m);
+        DBG_FLAGS;
         return;
     }
     r=tcp_session_ack(session,tcphdr,m);
+    DBG_FLAGS;
     if(fin && r) tcp_session_fin(session,tcphdr,m);
     // ack和fin的处理不自动回收mbuf
     mbuf_put(m);
