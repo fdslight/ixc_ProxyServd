@@ -95,13 +95,13 @@ class proxyd(dispatcher.dispatcher):
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
     def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
-        pass
+        if not self.__access.session_exists(uid): return
 
     def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
-        print(win_size, byte_data)
+        if not self.__access.session_exists(uid): return
 
     def tcp_close_cb(self, uid: bytes, conn_id: bytes):
-        print("close tcp ")
+        if not self.__access.session_exists(uid): return
 
     def init_func(self, debug, configs):
         self.create_poll()
@@ -235,7 +235,7 @@ class proxyd(dispatcher.dispatcher):
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
         # 此处找打用户的文件描述符以及IP地址
-        fileno, username, address, udp_sessions, priv_data = self.__access.get_session_info(_id)
+        fileno, username, address, udp_sessions, tcp_sessions, priv_data = self.__access.get_session_info(_id)
 
         if not self.handler_exists(fileno): return
 

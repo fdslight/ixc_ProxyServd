@@ -59,7 +59,7 @@ class access(object):
         """
         if self.session_exists(session_id): return
 
-        self.__sessions[session_id] = [fileno, username, address, {}, priv_data]
+        self.__sessions[session_id] = [fileno, username, address, {}, {}, priv_data]
         self.__timer.set_timeout(session_id, self.__SESSION_TIMEOUT)
         logging.print_general("add_session:%s" % username, address)
 
@@ -148,3 +148,12 @@ class access(object):
         info = self.__sessions[session_id][3]
 
         return info.get(_id, -1)
+
+    def tcp_add(self, session_id: bytes, conn_id: bytes, is_ipv6=False):
+        pass
+
+    def tcp_del(self, session_id: bytes, conn_id: bytes):
+        pass
+
+    def tcp_get(self, session_id: bytes, conn_id: bytes):
+        pass
