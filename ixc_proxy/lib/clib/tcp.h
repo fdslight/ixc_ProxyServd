@@ -16,7 +16,7 @@
 //////超时,单位是秒,注意这里的时间要小于TCP_TIMEOUT_MAX值
 #define TCP_TIMEOUT_MAX 180
 /// TCP SYN超时时间
-#define TCP_TIMEOUT_SYN 1000
+#define TCP_TIMEOUT_SYN 4
 /// TCP KEEP ALIVE超时时间
 #define TCP_TIMEOUT_KEEP_ALIVE 120
 /// TCP FIN超时时间

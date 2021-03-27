@@ -125,7 +125,7 @@ static void tcp_session_conn_timeout_cb(void *data)
 
     //DBG_FLAGS;
     if(session->tcp_st==TCP_ST_SYN_SND){
-        if(timeout>TCP_TIMEOUT_SYN){
+        if(timeout>TCP_TIMEOUT_SYN*1000){
             DBG("TCP syn wait timeout\r\n");
             tcp_session_close(session);
             return;
