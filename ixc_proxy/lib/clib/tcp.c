@@ -23,7 +23,9 @@ static void tcp_send_rst(struct tcp_session *session);
 
 static void tcp_sysloop_cb(struct sysloop *loop)
 {
+    DBG_FLAGS;
     tcp_timer_do();
+    DBG_FLAGS;
 }
 
 /// 获取数据传输延迟,单位是ms
@@ -748,7 +750,7 @@ int tcp_close(unsigned char *session_id,int is_ipv6)
     
     // 如果没有数据那么直接发送FIN数据帧,并且序列号加1
     if(TCP_SENT_BUF(session)->used_size){
-        session->sent_seq_cnt+=1;
+        //session->sent_seq_cnt+=1;
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
     }
