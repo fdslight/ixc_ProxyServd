@@ -164,11 +164,13 @@ void tcp_timer_do(void)
     tot=ms / tcp_timer.tick_timeout;
 
     for(int n=0;n<tot;n++){
+        DBG_FLAGS;
         node=tick->head;
+        DBG_FLAGS;
         while(NULL!=node){
             if(!node->is_valid){
                 t_node=node->next;
-                ex_free(node);
+                free(node);
                 node=t_node;
             }else{
                 node->timeout_flags=1;
@@ -179,6 +181,7 @@ void tcp_timer_do(void)
                 head=node;
 
                 node=t_node;
+                DBG_FLAGS;
             }
         }
         //DBG_FLAGS;
@@ -187,6 +190,7 @@ void tcp_timer_do(void)
         tick=tick->next;
     }
 
+    DBG_FLAGS;
     // 此处更新tick head，以便超时函数里能够调用tcp_timer_update
     // 另外注意需要判断时间间隔是否低于单个tick时间,如果不加入判断那么tick永远无法向前移动
     if(NULL!=head){
