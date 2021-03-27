@@ -312,20 +312,6 @@ class proxyd(dispatcher.dispatcher):
         os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
         os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
-    def __config_gateway6(self, ip6_subnet, prefix, eth_name):
-        """配置IPV6网关
-        :param ip6address:
-        :param eth_name:
-        :return:
-        """
-        # 开启IPV6流量重定向
-        os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
-
-        # os.system("ip -6 route add default via %s dev %s" % (ip6_gw, eth_name,))
-
-        os.system("ip6tables -t nat -I POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (ip6_subnet, prefix, eth_name,))
-        os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (ip6_subnet, prefix))
-
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns_fileno):
             self.delete_handler(self.__dns_fileno)
