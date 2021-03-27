@@ -21,6 +21,8 @@
 #include "static_nat.h"
 #include "ipalloc.h"
 #include "qos.h"
+#include "tcp.h"
+#include "tcp_timer.h"
 
 #include "../../../pywind/clib/sysloop.h"
 #include "../../../pywind/clib/netif/tuntap.h"
@@ -186,6 +188,9 @@ proxy_dealloc(proxy_object *self)
     static_nat_uninit();
     ipalloc_uninit();
 
+    tcp_uninit();
+    tcp_timer_uninit();
+
     sysloop_uninit();
     mbuf_uninit();
 }
@@ -207,6 +212,18 @@ proxy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     rs=sysloop_init();
     if(rs<0){
         STDERR("cannot init sysloop\r\n");
+        return NULL;
+    }
+
+    rs=tcp_timer_init(30,10);
+    if(rs<0){
+        STDERR("cannot init tcp timer\r\n");
+        return NULL;
+    }
+
+    rs=tcp_init();
+    if(rs<0){
+        STDERR("cannot init tcp\r\n");
         return NULL;
     }
 
@@ -278,7 +295,38 @@ proxy_init(proxy_object *self,PyObject *args,PyObject *kwds)
 static PyObject *
 proxy_tcp_cb_fn_set(PyObject *self,PyObject *args)
 {
-    return NULL;
+    PyObject *tcp_conn_fn,*tcp_recv_fn,*tcp_close_fn;
+
+    if(!PyArg_ParseTuple(args,"OOO",&tcp_conn_fn,&tcp_recv_fn,&tcp_close_fn)) return NULL;
+
+    Py_XDECREF(tcp_conn_ev_cb);
+    Py_XDECREF(tcp_recv_cb);
+    Py_XDECREF(tcp_conn_close_cb);
+
+    tcp_conn_ev_cb=tcp_conn_fn;
+    tcp_recv_cb=tcp_recv_fn;
+    tcp_conn_close_cb=tcp_close_fn;
+
+    Py_INCREF(tcp_conn_ev_cb);
+    Py_INCREF(tcp_recv_cb);
+    Py_INCREF(tcp_conn_close_cb);
+
+    Py_RETURN_NONE;
+}
+
+/// 关闭TCP连接
+static PyObject *
+proxy_tcp_close(PyObject *self,PyObject *args)
+{
+    unsigned char *conn_id;
+    int is_ipv6;
+    Py_ssize_t size;
+
+    if(!PyArg_ParseTuple(args,"y#p",&conn_id,&size,&is_ipv6)) return NULL;
+
+    tcp_close(conn_id,is_ipv6);
+
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -465,6 +513,7 @@ static PyMemberDef proxy_members[]={
 
 static PyMethodDef proxy_methods[]={
     {"tcp_cb_fn_set",(PyCFunction)proxy_tcp_cb_fn_set,METH_VARARGS,"set tcp callback function"},
+    {"tcp_close",(PyCFunction)proxy_tcp_close,METH_VARARGS,"close tcp connection"},
 
     {"mtu_set",(PyCFunction)proxy_mtu_set,METH_VARARGS,"set mtu for IP and IPv6"},
 

@@ -94,12 +94,23 @@ class proxyd(dispatcher.dispatcher):
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
+    def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
+        print(uid, conn_id, saddr, daddr)
+
+    def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
+        pass
+
+    def tcp_close_cb(self, uid: bytes, conn_id: bytes):
+        pass
+
     def init_func(self, debug, configs):
         self.create_poll()
 
         self.__configs = configs
         self.__debug = debug
+
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
+        self.__proxy.tcp_cb_fn_set(self.tcp_conn_ev_cb, self.tcp_recv_cb, self.tcp_close_cb)
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
