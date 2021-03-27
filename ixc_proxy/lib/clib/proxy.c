@@ -130,7 +130,7 @@ int netpkt_tcp_conn_ev(unsigned char *uid,unsigned char *session_id,unsigned cha
     inet_ntop(fa,saddr,src_addr,512);
     inet_ntop(fa,daddr,dst_addr,512);
 
-    arglist=Py_BuildValue("(y#y#ssHHNNy#)",uid,16,session_id,session_len,src_addr,dst_addr,sport,dport,PyBool_FromLong(is_ipv6));
+    arglist=Py_BuildValue("(y#y#ssHHN)",uid,16,session_id,session_len,src_addr,dst_addr,sport,dport,PyBool_FromLong(is_ipv6));
     result=PyObject_CallObject(tcp_conn_ev_cb,arglist);
  
     Py_XDECREF(arglist);
