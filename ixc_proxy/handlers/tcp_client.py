@@ -37,7 +37,7 @@ class tcp_client(tcp_handler.tcp_handler):
 
         while 1:
             try:
-                self.send_msg(self.__sent_buf.pop(0))
+                self.send_msg(512, self.__sent_buf.pop(0))
             except IndexError:
                 break
             ''''''
