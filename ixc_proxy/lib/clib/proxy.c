@@ -314,6 +314,37 @@ proxy_tcp_cb_fn_set(PyObject *self,PyObject *args)
     Py_RETURN_NONE;
 }
 
+/// 发送TCP数据包
+static PyObject *
+proxy_tcp_send(PyObject *self,PyObject *args)
+{
+    unsigned char *conn_id;
+    unsigned char *data;
+    int is_ipv6,rs;
+    Py_ssize_t size_id,size_data;
+
+    if(!PyArg_ParseTuple(args,"y#y#p",&conn_id,&size_id,&data,&size_data,&is_ipv6)) return NULL;
+
+    rs=tcp_send(conn_id,data,size_data,is_ipv6);
+    
+    return PyLong_FromLong(rs);
+}
+
+/// 设置本端的TCP窗口大小
+static PyObject *
+proxy_tcp_win_set(PyObject *self,PyObject *args)
+{
+    unsigned char *conn_id;
+    int is_ipv6,win_size;
+    Py_ssize_t size;
+
+    if(!PyArg_ParseTuple(args,"y#Hp",&conn_id,&size,&win_size,&is_ipv6)) return NULL;
+
+    tcp_window_set(conn_id,is_ipv6,win_size);
+
+    Py_RETURN_NONE;
+}
+
 /// 关闭TCP连接
 static PyObject *
 proxy_tcp_close(PyObject *self,PyObject *args)
@@ -517,6 +548,8 @@ static PyMemberDef proxy_members[]={
 
 static PyMethodDef proxy_methods[]={
     {"tcp_cb_fn_set",(PyCFunction)proxy_tcp_cb_fn_set,METH_VARARGS,"set tcp callback function"},
+    {"tcp_send",(PyCFunction)proxy_tcp_send,METH_VARARGS,"send tcp data"},
+    {"tcp_win_set",(PyCFunction)proxy_tcp_win_set,METH_VARARGS,"set tcp window size"},
     {"tcp_close",(PyCFunction)proxy_tcp_close,METH_VARARGS,"close tcp connection"},
 
     {"mtu_set",(PyCFunction)proxy_mtu_set,METH_VARARGS,"set mtu for IP and IPv6"},
