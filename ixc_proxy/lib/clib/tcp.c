@@ -67,9 +67,9 @@ static void tcp_session_del_cb(void *data)
     if(NULL!=session->conn_tm_node) tcp_timer_del(session->conn_tm_node);
 
     tcp_sessions.conn_count-=1;
-    DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
+    //DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
     free(session);
-    DBG_FLAGS;
+    //DBG_FLAGS;
 }
 
 static void tcp_session_data_timeout_cb(void *data)
@@ -490,7 +490,7 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
                 DBG("tcp four times closed\r\n");
                 tcp_session_close(session);
             }
-            return 1;
+            return 0;
         }
         // 如果对端未关闭那么更新连接时间
         if(!session->peer_sent_closed) gettimeofday(&(session->conn_time_up),NULL);
