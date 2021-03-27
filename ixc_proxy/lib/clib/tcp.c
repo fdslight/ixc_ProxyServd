@@ -61,6 +61,7 @@ static void tcp_session_del_cb(void *data)
 {
     struct tcp_session *session=data;
     
+    DBG_FLAGS;
     // 发送一次RST数据包,确保TCP被停止
     tcp_send_rst(session);
     netpkt_tcp_close_ev(session->uid,session->id,session->is_ipv6);
@@ -70,7 +71,7 @@ static void tcp_session_del_cb(void *data)
 
     tcp_sessions.conn_count-=1;
 
-    DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
+   //DBG("tcp connections %lld\r\n",tcp_sessions.conn_count);
 
     free(session);
 }
