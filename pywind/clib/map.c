@@ -206,6 +206,7 @@ void map_del(struct map *m,const char *key,map_del_func_t fn)
 	t=map_find(m,key,&is_found);
 	DBG_FLAGS;
 	if(!is_found) return;
+	
 	DBG_FLAGS;
 	if(NULL!=fn) fn(t);
 
