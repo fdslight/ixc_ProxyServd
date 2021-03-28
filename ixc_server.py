@@ -308,8 +308,8 @@ class proxyd(dispatcher.dispatcher):
 
     def __config_gateway6(self, subnet, prefix, eth_name):
         os.system("ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME))
-        os.system("sysctl -w net.ipv6.conf.all.forwarding=1")
-        os.system("ip6tables -t nat -I POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name))
+        os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
+        os.system("ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,))
         os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
     def __exit(self, signum, frame):
