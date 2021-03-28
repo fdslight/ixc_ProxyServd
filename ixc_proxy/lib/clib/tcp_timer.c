@@ -128,8 +128,8 @@ void tcp_timer_update(struct tcp_timer_node *node,time_t timeout_ms)
     struct tcp_timer_tick *tick;
 
     if(timeout_ms/1000 > tcp_timer.timeout_max){
-        STDERR("cannot update time,the value is too large %ld\r\n",timeout_ms);
-        return;
+        //STDERR("cannot update time,the value is too large %ld\r\n",timeout_ms);
+        timeout_ms=200;
     }
 
     node->timeout_flags=0;

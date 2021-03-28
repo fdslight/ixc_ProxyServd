@@ -470,7 +470,6 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
         }
     }
     //DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
-
     session->seq+=ack_size;
     // 减少已经被确认的数据
     session->sent_seq_cnt-=ack_size;
