@@ -31,7 +31,6 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
-    DBG_FLAGS;
     m->is_ipv6=1;
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
     next_header=header->next_header;
@@ -63,7 +62,7 @@ void ipv6_handle(struct mbuf *m)
         case 6:
         case 58:
             static_nat_handle(m);
-            DBG_FLAGS;
+            //DBG_FLAGS;
             break;
         case 17:
             udp_handle(m,1);
