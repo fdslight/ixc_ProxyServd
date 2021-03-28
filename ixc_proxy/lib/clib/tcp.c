@@ -77,7 +77,7 @@ static void tcp_session_data_timeout_cb(void *data)
 
     // 如果发送缓冲区有数据那么发送数据
     if(TCP_SENT_BUF(session)->used_size!=0){
-        //DBG_FLAGS;
+        DBG_FLAGS;
         tcp_send_from_buf(session);
         tcp_timer_update(tm_node,session->delay_ms);
         return;
