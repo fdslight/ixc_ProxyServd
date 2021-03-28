@@ -447,8 +447,9 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
         return;
     }
 
-    //DBG("ack size %d\r\n",ack_size);
+    DBG("ack size %d\r\n",ack_size);
     tcp_buf_data_ptr_move(TCP_SENT_BUF(session),ack_size);
+    DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
 
     session->seq+=ack_size;
     // 减少已经被确认的数据
