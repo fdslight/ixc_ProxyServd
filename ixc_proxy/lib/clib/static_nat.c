@@ -214,6 +214,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     DBG_FLAGS;
 
     if(m->from==MBUF_FROM_LAN) {
+        DBG_FLAGS;
         memcpy(key,m->id,16);
         memcpy(&key[16],header->src_addr,16);
         is_src=1;
@@ -239,6 +240,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(r){
+        DBG_FLAGS;
         r->up_time=time(NULL);
         static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
