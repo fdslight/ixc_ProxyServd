@@ -419,6 +419,7 @@ static void tcp_send_from_buf(struct tcp_session *session)
         sent_size=peer_mss>peer_wind?peer_wind:peer_mss;
         sent_size=tcp_buf_copy_from_tcp_buf(TCP_SENT_BUF(session),buf,sent_size);
         
+        DBG_FLAGS;
         tcp_send_data(session,TCP_ACK,NULL,0,buf,sent_size);
 
         peer_wind-=sent_size;
