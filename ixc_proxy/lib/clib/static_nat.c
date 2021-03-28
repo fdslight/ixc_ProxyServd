@@ -211,7 +211,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     char key[32];
     int is_src=0,rs;
 
-    //DBG_FLAGS;
+    DBG_FLAGS;
 
     if(m->from==MBUF_FROM_LAN) {
         memcpy(key,m->id,16);
