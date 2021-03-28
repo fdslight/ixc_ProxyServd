@@ -409,10 +409,11 @@ static void tcp_send_from_buf(struct tcp_session *session)
     unsigned short peer_mss=session->peer_mss;
     unsigned short peer_wind=session->peer_window_size;
     unsigned short used_size=TCP_SENT_BUF(session)->used_size;
+    unsigned int seq=session->seq;
 
     unsigned char buf[0xffff];
     
-    for(int n=0;n<1;n++){
+    while(1){
         if(peer_wind==0) break;
         //if(peer_wind==0) return;
 
@@ -427,8 +428,11 @@ static void tcp_send_from_buf(struct tcp_session *session)
         //DBG("%d %d\r\n",tot_size,used_size);
 
         if(tot_size>=used_size) break;
+        session->seq+=sent_size;
         //if(tot_size>=used_size) return;
     }
+
+    session->seq=seq;
 
     if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed && session->tcp_st==TCP_ST_OK){
         session->sent_seq_cnt+=1;
@@ -457,7 +461,7 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
     //DBG("ack size %d\r\n",ack_size);
     tcp_buf_data_ptr_move(TCP_SENT_BUF(session),ack_size);
     //DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
-    DBG("---------------------------\r\n");
+
     session->seq+=ack_size;
     // 减少已经被确认的数据
     session->sent_seq_cnt-=ack_size;
