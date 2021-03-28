@@ -214,13 +214,13 @@ static void static_nat_handle_v6(struct mbuf *m)
     DBG_FLAGS;
 
     if(m->from==MBUF_FROM_LAN) {
-        DBG_FLAGS;
+        //DBG_FLAGS;
         memcpy(key,m->id,16);
         memcpy(&key[16],header->src_addr,16);
         is_src=1;
         r=map_find(static_nat.natv6_lan2wan,key,&is_found);
     }else{
-        DBG_FLAGS;
+        //DBG_FLAGS;
         memcpy(key,header->dst_addr,16);
         r=map_find(static_nat.natv6_wan2lan,key,&is_found);
 
@@ -232,7 +232,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(m->from==MBUF_FROM_WAN){
-        DBG_FLAGS;
+        //DBG_FLAGS;
         memcpy(m->id,r->id,16);
         static_nat_rewrite_ip6(header,r->lan_addr1,is_src);
         static_nat_send_next_for_v6(m,header);
@@ -240,7 +240,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(r){
-        DBG_FLAGS;
+        //DBG_FLAGS;
         r->up_time=time(NULL);
         static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
