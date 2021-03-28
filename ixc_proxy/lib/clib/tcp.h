@@ -66,6 +66,8 @@ struct tcp_session{
     // 定时器
     // tcp会话状态
     int tcp_st;
+    // fin发送计数
+    int tcp_fin_sent_count;
     // 对端TCP mss
     unsigned short peer_mss;
     // 本端TCP mss

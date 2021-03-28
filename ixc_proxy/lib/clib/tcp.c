@@ -106,10 +106,16 @@ static void tcp_session_conn_timeout_cb(void *data)
             tcp_session_close(session);
             return;
         }
-        
+
+        if(session->tcp_st==TCP_ST_FIN_SND_WAIT && session->tcp_fin_sent_count>3){
+            tcp_session_close(session);
+            return;
+        }
+
         // 如果缓冲区无数据那么也发送结束帧
         if(TCP_SENT_BUF(session)->used_size==0){
             session->tcp_st=TCP_ST_FIN_SND_WAIT;
+            session->tcp_fin_sent_count+=1;
             DBG_FLAGS;
             tcp_send_data(session,TCP_FIN | TCP_ACK,NULL,0,NULL,0);
         }
