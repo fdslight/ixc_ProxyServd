@@ -454,6 +454,7 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
     int used_size,ack_size;
     
     ack_size=tcphdr->ack_num-session->seq;
+    DBG("ack size %d\r\n",ack_size);
     // 此处考虑序列号回绕情况
     if(ack_size<0) ack_size=0xffffffff-abs(ack_size);
     used_size=tcp_buf_free_buf_get(TCP_SENT_BUF(session));
@@ -478,7 +479,6 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
 static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tcphdr,struct mbuf *m)
 {
     int payload_len=m->tail-m->offset;
-    unsigned int tmp=session->seq+session->sent_seq_cnt;
 
     session->delay_ms=tcp_session_get_data_delay(session);
     session->peer_window_size=tcphdr->win_size;
