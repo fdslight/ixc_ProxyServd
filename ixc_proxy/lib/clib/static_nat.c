@@ -73,39 +73,12 @@ static void static_nat_sysloop_cb(struct sysloop *loop)
 /// 发送到下一个IPv4节点处理
 static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *header)
 {
-    // 查找是否指向自己
-    struct static_nat_record *r=NULL;
-    struct map *map=static_nat.natv4_wan2lan;
-    char is_found;
-
-    r=map_find(map,(char *)(header->dst_addr),&is_found);
-
-    if(NULL!=r){
-        memcpy(m->id,r->id,16);
-        m->from=MBUF_FROM_WAN;
-        netpkt_send(m);
-        return;
-    }
-
     qos_add(m);
 }
 
 /// 发送到下一个IPv6节点处理
 static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *header)
-{    
-    struct static_nat_record *r=NULL;
-    struct map *map=static_nat.natv4_wan2lan;
-    char is_found;
-
-    r=map_find(map,(char *)(header->dst_addr),&is_found);
-
-    if(NULL!=r){
-        memcpy(m->id,r->id,16);
-        m->from=MBUF_FROM_WAN;
-        netpkt_send(m);
-        return;
-    }
-
+{   
     qos_add(m);
 }
 

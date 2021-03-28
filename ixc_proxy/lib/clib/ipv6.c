@@ -39,9 +39,9 @@ void ipv6_handle(struct mbuf *m)
 
     //PRINT_IP6(" ",header->dst_addr);
     
-    // 如果是同一个局域网那么发送到局域网
+    // 如果是同一个局域网丢弃数据包
     if(ipalloc_is_lan(header->dst_addr,1) && m->from==MBUF_FROM_LAN){
-        static_nat_handle(m);
+        mbuf_put(m);
         return;
     }
 
