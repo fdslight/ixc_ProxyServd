@@ -31,19 +31,19 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
-    // 来自于WAN的数据包丢弃,NAT66通过应用层模拟
-    if(m->from==MBUF_FROM_WAN){
-        mbuf_put(m);
-        return;
-    }
-    
     m->is_ipv6=1;
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
     next_header=header->next_header;
-
-    // 如果是同一个局域网那么相互发送
-    if(ipalloc_is_lan(header->dst_addr,1)){
+    
+    // 如果是同一个局域网那么发送到局域网
+    if(ipalloc_is_lan(header->dst_addr,1) && m->from==MBUF_FROM_LAN){
         static_nat_handle(m);
+        return;
+    }
+
+    // 禁用WAN的UDP和UDPLite数据包
+    if(m->from==MBUF_FROM_WAN && (header->next_header=17 || header->next_header==136)){
+        mbuf_put(m);
         return;
     }
 

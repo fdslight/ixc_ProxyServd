@@ -53,8 +53,8 @@ void ip_handle(struct mbuf *m)
 
     m->is_ipv6=0;
 
-    // 如果实在同一个网段那么就直接进行NAT处理
-    if(ipalloc_is_lan(header->dst_addr,0)){
+    // 如果是在一个网段那么就直接进行NAT处理
+    if(ipalloc_is_lan(header->dst_addr,0) && m->from==MBUF_FROM_LAN){
         static_nat_handle(m);
         return;
     }
