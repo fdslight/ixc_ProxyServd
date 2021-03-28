@@ -77,7 +77,7 @@ static void tcp_session_data_timeout_cb(void *data)
 
     // 如果发送缓冲区有数据那么发送数据
     if(TCP_SENT_BUF(session)->used_size!=0){
-        DBG_FLAGS;
+        //DBG_FLAGS;
         tcp_send_from_buf(session);
         tcp_timer_update(tm_node,session->delay_ms);
         return;
@@ -482,10 +482,6 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
 
     session->delay_ms=tcp_session_get_data_delay(session);
     session->peer_window_size=tcphdr->win_size;
-    
-    // 如果确认号大于序列号那么丢弃数据包,这里考虑序列号回转情况
-    // 对于序列号回转这部分采用丢包处理
-    if(tcphdr->ack_num > tmp) return 0;
 
     if(TCP_ST_SYN_SND==session->tcp_st && session->peer_seq==tcphdr->seq_num){
         session->tcp_st=TCP_ST_OK;
