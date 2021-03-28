@@ -57,7 +57,7 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
     memcpy(&csum,csum_ptr,2);
 
     for(int n=0;n<8;n++){
-        csum=csum_calc_incre(*old_u16addr,*new_u16addr++,csum);
+        csum=csum_calc_incre(*old_u16addr++,*new_u16addr++,csum);
     }
 
     memcpy(csum_ptr,&csum,2);
