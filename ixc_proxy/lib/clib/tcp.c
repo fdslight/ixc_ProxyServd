@@ -511,7 +511,7 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
 static void tcp_session_fin(struct tcp_session *session,struct netutil_tcphdr *tcphdr,struct mbuf *m)
 {
     session->peer_sent_closed=1;
-    //session->peer_seq+=1;
+    session->peer_seq+=1;
     // 如果缓冲区没有数据那么直接发送ACK
     if(TCP_SENT_BUF(session)->used_size==0) tcp_send_data(session,TCP_ACK,NULL,0,NULL,0);
 }
