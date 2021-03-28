@@ -112,6 +112,7 @@ static void tcp_session_conn_timeout_cb(void *data)
         // 如果缓冲区无数据那么也发送结束帧
         if(session->tcp_st==TCP_ST_OK && TCP_SENT_BUF(session)->used_size==0){
             session->tcp_st=TCP_ST_FIN_SND_WAIT;
+            DBG_FLAGS;
             tcp_send_data(session,TCP_FIN | TCP_ACK,NULL,0,NULL,0);
         }
 
@@ -748,8 +749,9 @@ int tcp_close(unsigned char *session_id,int is_ipv6)
     session->my_sent_closed=1;
     
     // 如果没有数据那么直接发送FIN数据帧,并且序列号加1
-    if(TCP_SENT_BUF(session)->used_size){
+    if(TCP_SENT_BUF(session)->used_size==0){
         //session->sent_seq_cnt+=1;
+        DBG_FLAGS;
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
     }
