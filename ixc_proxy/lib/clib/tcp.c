@@ -429,12 +429,12 @@ static void tcp_send_from_buf(struct tcp_session *session)
         //if(tot_size>=used_size) return;
     }
 
-   /** if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed){
+    if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed && session->tcp_st==TCP_ST_OK){
         session->sent_seq_cnt+=1;
-
+        DBG_FLAGS;
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
-    }**/
+    }
 }
 
 /// 发送确认处理
@@ -754,8 +754,9 @@ int tcp_close(unsigned char *session_id,int is_ipv6)
     session->my_sent_closed=1;
     
     // 如果没有数据那么直接发送FIN数据帧,并且序列号加1
-    if(TCP_SENT_BUF(session)->used_size==0){
+    if(TCP_SENT_BUF(session)->used_size==0 && session->tcp_st==TCP_ST_OK){
         session->sent_seq_cnt+=1;
+        DBG_FLAGS;
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
     }
