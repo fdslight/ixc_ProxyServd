@@ -20,7 +20,6 @@ import ixc_proxy.handlers.tundev as tundev
 import ixc_proxy.handlers.tunnels as tunnels
 
 import ixc_proxy.handlers.udp_client as udp_client
-import ixc_proxy.handlers.tcp_client as tcp_client
 
 import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
@@ -97,28 +96,6 @@ class proxyd(dispatcher.dispatcher):
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
-    def tcp_conn_ev_cb(self, uid: bytes, conn_id: bytes, saddr: str, daddr: str, sport: int, dport: int, is_ipv6: bool):
-        if not self.__access.session_exists(uid): return
-        fd = self.create_handler(-1, tcp_client.tcp_client, uid, conn_id, (saddr, sport,), (daddr, dport),
-                                 is_ipv6=is_ipv6)
-        if fd < 0:
-            self.proxy.tcp_close(conn_id, is_ipv6)
-            return
-        self.__access.tcp_add(uid, conn_id, fd)
-
-    def tcp_recv_cb(self, uid: bytes, conn_id: bytes, win_size: int, byte_data: bytes):
-        if not self.__access.session_exists(uid): return
-        fd = self.__access.tcp_get(uid, conn_id)
-        if fd < 0: return
-        self.get_handler(fd).send_msg(win_size, byte_data)
-
-    def tcp_close_cb(self, uid: bytes, conn_id: bytes):
-        if not self.__access.session_exists(uid): return
-        fd = self.__access.tcp_get(uid, conn_id)
-        if fd < 0: return
-        self.__access.tcp_del(uid, conn_id)
-        self.delete_handler(fd)
-
     def init_func(self, debug, configs):
         self.create_poll()
 
@@ -126,7 +103,6 @@ class proxyd(dispatcher.dispatcher):
         self.__debug = debug
 
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
-        self.__proxy.tcp_cb_fn_set(self.tcp_conn_ev_cb, self.tcp_recv_cb, self.tcp_close_cb)
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
@@ -299,11 +275,7 @@ class proxyd(dispatcher.dispatcher):
         if not self.__access.session_exists(user_id): return
         self.__access.udp_del(user_id, address)
 
-    def tcp_del(self, user_id: bytes, conn_id: bytes):
-        if not self.__access.session_exists(user_id): return
-        self.__access.tcp_del(user_id,conn_id)
-
-    def tell_unregister_session(self, user_id: bytes, fileno: int, udp_conns: dict, tcp_conns: dict):
+    def tell_unregister_session(self, user_id: bytes, fileno: int, udp_conns: dict):
         # 此处需要检测fd被重用的情况
         if self.handler_exists(fileno):
             if self.get_handler(fileno).is_tcp():
@@ -314,10 +286,6 @@ class proxyd(dispatcher.dispatcher):
             ''''''
         for _id in udp_conns:
             fd = udp_conns[_id]
-            self.delete_handler(fd)
-
-        for conn_id in tcp_conns:
-            fd = tcp_conns[conn_id]
             self.delete_handler(fd)
 
     def __config_gateway(self, subnet, prefix, eth_name):

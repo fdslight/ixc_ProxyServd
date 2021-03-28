@@ -59,7 +59,7 @@ class access(object):
         """
         if self.session_exists(session_id): return
 
-        self.__sessions[session_id] = [fileno, username, address, {}, {}, priv_data]
+        self.__sessions[session_id] = [fileno, username, address, {}, priv_data]
         self.__timer.set_timeout(session_id, self.__SESSION_TIMEOUT)
         logging.print_general("add_session:%s" % username, address)
 
@@ -77,8 +77,8 @@ class access(object):
 
         self.__timer.drop(session_id)
         self.handle_close(session_id)
-        fileno, username, address, udp_conns, tcp_conns, priv_data = self.__sessions[session_id]
-        self.__dispatcher.tell_unregister_session(session_id, fileno, udp_conns, tcp_conns)
+        fileno, username, address, udp_conns, priv_data = self.__sessions[session_id]
+        self.__dispatcher.tell_unregister_session(session_id, fileno, udp_conns)
 
         logging.print_general("del_session:%s" % username, address)
         del self.__sessions[session_id]
@@ -148,15 +148,3 @@ class access(object):
         info = self.__sessions[session_id][3]
 
         return info.get(_id, -1)
-
-    def tcp_add(self, session_id: bytes, conn_id: bytes, fileno: int):
-        tcp_conns = self.__sessions[session_id][4]
-        tcp_conns[conn_id] = fileno
-
-    def tcp_del(self, session_id: bytes, conn_id: bytes):
-        tcp_conns = self.__sessions[session_id][4]
-        if conn_id in tcp_conns: del tcp_conns[conn_id]
-
-    def tcp_get(self, session_id: bytes, conn_id: bytes):
-        tcp_conns = self.__sessions[session_id][4]
-        return tcp_conns.get(conn_id, -1)
