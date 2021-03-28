@@ -458,7 +458,17 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
         DBG("wrong peer ack number used_size:%d  ack_size:%d\r\n",used_size,ack_size);
         return;
     }
+
     tcp_buf_data_ptr_move(TCP_SENT_BUF(session),ack_size);
+
+    used_size=tcp_buf_free_buf_get(TCP_SENT_BUF(session));
+    if(used_size==0){
+        // 如果没有数据那么删除定时器
+        if(NULL!=session->data_tm_node){
+            tcp_timer_del(session->data_tm_node);
+            session->data_tm_node=NULL;
+        }
+    }
     //DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
 
     session->seq+=ack_size;
