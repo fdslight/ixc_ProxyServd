@@ -29,14 +29,12 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
     if(is_src) {
         memcpy(old_addr,header->src_addr,16);
         memcpy(header->src_addr,new_addr,16);
-
-        old_u16addr=(unsigned short *)(old_addr);
     }else{
         memcpy(old_addr,header->dst_addr,16);
-        memcpy(header->dst_addr,new_addr,16);
-
-        old_u16addr=(unsigned short *)(old_addr);
+        memcpy(header->dst_addr,new_addr,16);    
     }
+
+    old_u16addr=(unsigned short *)(old_addr);
 
     switch(header->next_header){
         case 6:
@@ -55,7 +53,8 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
 
     // 不需要重写传输层校验和直接跳过
     if(!flags) return;
-    csum=*((unsigned short *)(csum_ptr));
+    
+    memcpy(&csum,csum_ptr,2);
 
     for(int n=0;n<16;n++){
         csum=csum_calc_incre(*old_u16addr,*new_u16addr++,csum);
