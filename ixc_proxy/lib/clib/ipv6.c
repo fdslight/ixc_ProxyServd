@@ -7,7 +7,6 @@
 #include "proxy.h"
 #include "static_nat.h"
 #include "qos.h"
-#include "tcp.h"
 #include "ipalloc.h"
 
 #include "../../../pywind/clib/debug.h"
@@ -65,9 +64,10 @@ void ipv6_handle(struct mbuf *m)
     next_header=header->next_header;
 
     switch(next_header){
+        case 58:
+            break;
         case 6:
             //DBG_FLAGS;
-            tcp_handle(m,1);
             break;
         case 17:
             udp_handle(m,1);
