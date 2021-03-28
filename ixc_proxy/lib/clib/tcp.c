@@ -443,13 +443,13 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
 
     // 如果确认大小大于缓冲区的大小那么忽略该数据包
     if(used_size<ack_size){
-        DBG("wrong peer ack number\r\n");
+        DBG("wrong peer ack number used_size:%d  ack_size:%d\r\n",used_size,ack_size);
         return;
     }
 
-    DBG("ack size %d\r\n",ack_size);
+    //DBG("ack size %d\r\n",ack_size);
     tcp_buf_data_ptr_move(TCP_SENT_BUF(session),ack_size);
-    DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
+    //DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
 
     session->seq+=ack_size;
     // 减少已经被确认的数据
