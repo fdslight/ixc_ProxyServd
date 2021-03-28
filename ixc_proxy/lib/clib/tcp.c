@@ -49,11 +49,9 @@ static void tcp_session_close(struct tcp_session *session)
 
 static void tcp_session_fin_wait_set(struct tcp_session *session)
 {
-    //struct tcp_timer_node *tm_node=session->tm_node;
     session->tcp_st=TCP_ST_FIN_SND_WAIT;
-
     // 注意一定需要判断语句,需要超时才能更新
-    //if(session->tm_node->timeout_flags) tcp_timer_update(tm_node,session->delay_ms);
+    if(session->conn_tm_node) tcp_timer_update(session->conn_tm_node,1000);
 }
 
 static void tcp_session_del_cb(void *data)
@@ -430,6 +428,13 @@ static void tcp_send_from_buf(struct tcp_session *session)
         if(tot_size>=used_size) break;
         //if(tot_size>=used_size) return;
     }
+
+    if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed){
+        session->sent_seq_cnt+=1;
+        
+        tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
+        tcp_session_fin_wait_set(session);
+    }
 }
 
 /// 发送确认处理
@@ -750,8 +755,7 @@ int tcp_close(unsigned char *session_id,int is_ipv6)
     
     // 如果没有数据那么直接发送FIN数据帧,并且序列号加1
     if(TCP_SENT_BUF(session)->used_size==0){
-        //session->sent_seq_cnt+=1;
-        DBG_FLAGS;
+        session->sent_seq_cnt+=1;
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
     }
