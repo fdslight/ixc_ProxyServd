@@ -93,6 +93,8 @@ void ip_handle(struct mbuf *m)
     if(m->from==MBUF_FROM_LAN && (header->protocol==17 || header->protocol==136)){
         if(mf!=0 || frag_off!=0) m=ipunfrag_add(m);
         if(NULL==m) return;
+        // 由于分片进行了重组,因此需要重新赋值header
+        header=(struct netutil_iphdr *)(m->data+m->offset);
     }
     //DBG_FLAGS;
     switch(header->protocol){

@@ -18,6 +18,7 @@ static int ipv6_enable_udplite=0;
 void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
+    struct netutil_ip6_frag_header *frag_header=NULL;
     unsigned char next_header;
 
     if(!ipalloc_isset_ip(1)){
@@ -51,22 +52,16 @@ void ipv6_handle(struct mbuf *m)
             mbuf_put(m);
             return;
         }
+        frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
+        next_header=frag_header->next_header;
+
         m=ip6unfrag_add(m);
     }
     
-    if(NULL==m){
-        mbuf_put(m);
-        return;
-    }
-
-    // 重组分片之后检查协议
-    header=(struct netutil_ip6hdr *)(m->data+m->offset);
-    next_header=header->next_header;
-
     switch(next_header){
-        case 58:
-            break;
         case 6:
+        case 58:
+            static_nat_handle(m);
             //DBG_FLAGS;
             break;
         case 17:

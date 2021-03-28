@@ -305,6 +305,12 @@ class proxyd(dispatcher.dispatcher):
         os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
         os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
+    def __config_gateway6(self, subnet, prefix, eth_name):
+        os.system("ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME))
+        os.system("sysctl -w net.ipv6.conf.all.forwarding=1")
+        os.system("ip6tables -t nat -I POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name))
+        os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
+
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns_fileno):
             self.delete_handler(self.__dns_fileno)
