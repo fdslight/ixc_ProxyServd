@@ -8,6 +8,7 @@
 #include "static_nat.h"
 #include "qos.h"
 #include "ipalloc.h"
+#include "debug.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -20,6 +21,7 @@ void ipv6_handle(struct mbuf *m)
     struct netutil_ip6hdr *header;
     struct netutil_ip6_frag_header *frag_header=NULL;
     unsigned char next_header;
+
 
     if(!ipalloc_isset_ip(1)){
         mbuf_put(m);
@@ -34,6 +36,8 @@ void ipv6_handle(struct mbuf *m)
     m->is_ipv6=1;
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
     next_header=header->next_header;
+
+    PRINT_IP6(" ",header->dst_addr);
     
     // 如果是同一个局域网那么发送到局域网
     if(ipalloc_is_lan(header->dst_addr,1) && m->from==MBUF_FROM_LAN){
@@ -43,6 +47,7 @@ void ipv6_handle(struct mbuf *m)
 
     // 禁用WAN的UDP和UDPLite数据包
     if(m->from==MBUF_FROM_WAN && (header->next_header=17 || header->next_header==136)){
+        PRINT_IP6(" ",header->dst_addr);
         mbuf_put(m);
         return;
     }
@@ -62,6 +67,7 @@ void ipv6_handle(struct mbuf *m)
     switch(next_header){
         case 6:
         case 58:
+            PRINT_IP6(" ",header->dst_addr);
             static_nat_handle(m);
             //DBG_FLAGS;
             break;
