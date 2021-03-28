@@ -429,12 +429,12 @@ static void tcp_send_from_buf(struct tcp_session *session)
         //if(tot_size>=used_size) return;
     }
 
-    if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed){
+   /** if(TCP_SENT_BUF(session)->used_size==0 && session->my_sent_closed){
         session->sent_seq_cnt+=1;
-        
+
         tcp_send_data(session,TCP_ACK | TCP_FIN,NULL,0,NULL,0);
         tcp_session_fin_wait_set(session);
-    }
+    }**/
 }
 
 /// 发送确认处理
