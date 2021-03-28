@@ -199,6 +199,7 @@ class proxyd(dispatcher.dispatcher):
         eth_name = nat_config["eth_name"]
 
         if enable_ipv6:
+            self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
