@@ -199,7 +199,7 @@ class proxyd(dispatcher.dispatcher):
         eth_name = nat_config["eth_name"]
 
         if enable_ipv6:
-            self.__config_gateway6(subnet, prefix, eth_name)
+            self.__config_gateway6(subnet, prefix)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
@@ -306,7 +306,7 @@ class proxyd(dispatcher.dispatcher):
         os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
         os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
-    def __config_gateway6(self, subnet, prefix, eth_name):
+    def __config_gateway6(self, subnet, prefix):
         os.system("ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME))
         os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
         os.system("ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,))

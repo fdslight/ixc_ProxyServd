@@ -33,9 +33,6 @@ class tundev(handler.handler):
             except BlockingIOError:
                 break
             v = (read_data[0] & 0xf0) >> 4
-            if v == 6:
-                import socket
-                print(socket.inet_ntop(socket.AF_INET6, read_data[24:40]))
             self.dispatcher.handle_ippkt_from_tundev(read_data)
 
     def evt_write(self):
