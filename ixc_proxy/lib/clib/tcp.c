@@ -234,7 +234,7 @@ static void tcp_send_data(struct tcp_session *session,unsigned short status,void
     unsigned short csum;
     struct mbuf *m=mbuf_get();
     unsigned short hdr_len=20+opt_size;
-
+    DBG_FLAGS;
     if(NULL==m){
         STDERR("cannot get mbuf\r\n");
         return;
