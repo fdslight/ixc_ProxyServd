@@ -234,7 +234,8 @@ static void tcp_send_data(struct tcp_session *session,unsigned short status,void
     unsigned short csum;
     struct mbuf *m=mbuf_get();
     unsigned short hdr_len=20+opt_size;
-    DBG_FLAGS;
+
+    //DBG_FLAGS;
     if(NULL==m){
         STDERR("cannot get mbuf\r\n");
         return;
@@ -443,8 +444,8 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
     int used_size,ack_size;
     
     ack_size=tcphdr->ack_num-session->seq;
-    // 此处考虑序列号回转情况
-    if(ack_size<0) ack_size=abs(ack_size);
+    // 此处考虑序列号回绕情况
+    if(ack_size<0) ack_size=0xffffffff-abs(ack_size);
     used_size=tcp_buf_free_buf_get(TCP_SENT_BUF(session));
 
     // 如果确认大小大于缓冲区的大小那么忽略该数据包
