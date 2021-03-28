@@ -468,13 +468,6 @@ static void tcp_sent_ack_handle(struct tcp_session *session,struct netutil_tcphd
     tcp_buf_data_ptr_move(TCP_SENT_BUF(session),ack_size);
 
     used_size=tcp_buf_free_buf_get(TCP_SENT_BUF(session));
-    if(used_size==0){
-        // 如果没有数据那么删除定时器
-        if(NULL!=session->data_tm_node){
-            tcp_timer_del(session->data_tm_node);
-            session->data_tm_node=NULL;
-        }
-    }
     //DBG("%d\r\n",TCP_SENT_BUF(session)->used_size);
     session->seq+=ack_size;
     // 减少已经被确认的数据
@@ -504,7 +497,7 @@ static int tcp_session_ack(struct tcp_session *session,struct netutil_tcphdr *tc
     }
     // 此处对发送的数据包进行确认并且发送发送缓冲区的数据
     if(tcphdr->seq_num==session->peer_seq){
-        if(payload_len!=0 && session->tcp_st==TCP_ST_OK) {
+        if(payload_len!=0 && !session->my_sent_closed) {
             //DBG("recv length:%d\r\n",payload_len);
             session->peer_seq=tcphdr->seq_num+payload_len;
             netpkt_tcp_recv(m->id,session->id,tcphdr->win_size,m->data+m->offset,payload_len,session->is_ipv6);
