@@ -60,7 +60,7 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
         csum=csum_calc_incre(*old_u16addr,*new_u16addr++,csum);
     }
 
-    *((unsigned short *)(csum_ptr))=csum;
+    memcpy(csum_ptr,&csum,2);
 }
 
 static void static_nat_sysloop_cb(struct sysloop *loop)
