@@ -33,6 +33,7 @@ class tundev(handler.handler):
             except BlockingIOError:
                 break
             v = (read_data[0] & 0xf0) >> 4
+            if v == 6: print(read_data)
             self.dispatcher.handle_ippkt_from_tundev(read_data)
 
     def evt_write(self):
