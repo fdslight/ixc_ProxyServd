@@ -62,10 +62,10 @@ class client(udp_handler.udp_handler):
         self.delete_handler(self.fileno)
 
     def udp_error(self):
-        self.dispatcher.udp_del(self.__user_id, self.__my_address)
         self.delete_handler(self.fileno)
 
     def udp_delete(self):
+        self.dispatcher.udp_del(self.__user_id, self.__my_address)
         self.unregister(self.fileno)
         self.close()
 

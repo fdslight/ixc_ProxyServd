@@ -89,6 +89,7 @@ class tcp_client(tcp_handler.tcp_handler):
         self.dispatcher.proxy.tcp_close(self.__conn_id, self.__is_ipv6)
 
     def tcp_delete(self):
+        self.dispatcher.tcp_del(self.__user_id, self.__conn_id)
         self.unregister(self.fileno)
         self.close()
 
