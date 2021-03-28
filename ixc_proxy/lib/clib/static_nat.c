@@ -75,10 +75,10 @@ static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *hea
 {
     // 查找是否指向自己
     struct static_nat_record *r=NULL;
-    struct map *m=static_nat.natv4_wan2lan;
+    struct map *map=static_nat.natv4_wan2lan;
     char is_found;
 
-    r=map_find(m,(char *)(header->dst_addr),&is_found);
+    r=map_find(map,(char *)(header->dst_addr),&is_found);
 
     if(NULL!=r){
         memcpy(m->id,r->id,16);
@@ -94,10 +94,10 @@ static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *hea
 static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *header)
 {    
     struct static_nat_record *r=NULL;
-    struct map *m=static_nat.natv4_wan2lan;
+    struct map *map=static_nat.natv4_wan2lan;
     char is_found;
 
-    r=map_find(m,(char *)(header->dst_addr),&is_found);
+    r=map_find(map,(char *)(header->dst_addr),&is_found);
 
     if(NULL!=r){
         memcpy(m->id,r->id,16);
