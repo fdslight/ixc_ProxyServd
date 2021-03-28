@@ -67,7 +67,7 @@ void ipv6_handle(struct mbuf *m)
     switch(next_header){
         case 6:
         case 58:
-            PRINT_IP6(" ",header->dst_addr);
+            //PRINT_IP6(" ",header->dst_addr);
             static_nat_handle(m);
             //DBG_FLAGS;
             break;
