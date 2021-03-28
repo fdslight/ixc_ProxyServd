@@ -26,12 +26,6 @@ void ip_handle(struct mbuf *m)
     int mf;
     int tot_len=ntohs(header->tot_len);
 
-    // 未设置IP地址丢弃数据包
-    if(!ipalloc_isset_ip(0)){
-        mbuf_put(m);
-        return;
-    }
-
     // 限制数据包最大长度
     if(m->tail-m->offset>1500){
         mbuf_put(m);
@@ -41,6 +35,12 @@ void ip_handle(struct mbuf *m)
     // 检查是否是IPv6,如果是IPv6那么处理IPv6协议
     if(version==6){
         ipv6_handle(m);
+        return;
+    }
+
+    // 未设置IP地址丢弃数据包
+    if(!ipalloc_isset_ip(0)){
+        mbuf_put(m);
         return;
     }
 

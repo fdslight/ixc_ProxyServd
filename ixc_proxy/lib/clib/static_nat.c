@@ -44,7 +44,7 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
             csum_ptr=ptr+56;
             break;
         case 58:
-            csum_ptr=ptr+2;
+            csum_ptr=ptr+42;
             break;
         default:
             flags=0;
