@@ -30,12 +30,12 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
         memcpy(old_addr,header->src_addr,16);
         memcpy(header->src_addr,new_addr,16);
 
-        old_u16addr=(unsigned short *)(header->src_addr);
+        old_u16addr=(unsigned short *)(old_addr);
     }else{
         memcpy(old_addr,header->dst_addr,16);
         memcpy(header->dst_addr,new_addr,16);
 
-        old_u16addr=(unsigned short *)(header->dst_addr);
+        old_u16addr=(unsigned short *)(old_addr);
     }
 
     switch(header->next_header){
