@@ -227,7 +227,7 @@ class proxyd(dispatcher.dispatcher):
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
         # 此处找打用户的文件描述符以及IP地址
-        fileno, username, address, udp_sessions, tcp_sessions, priv_data = self.__access.get_session_info(_id)
+        fileno, username, address, udp_sessions, priv_data = self.__access.get_session_info(_id)
 
         if not self.handler_exists(fileno): return
 
