@@ -47,7 +47,8 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
-    if(next_header==44){
+    // 只对LAN重组
+    if(next_header==44 && m->from==MBUF_FROM_LAN){
         if(m->tail-m->offset<49){
             mbuf_put(m);
             return;

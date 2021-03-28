@@ -257,6 +257,9 @@ class proxyd(dispatcher.dispatcher):
             return
 
     def handle_ippkt_from_tundev(self, msg: bytes):
+        v = (msg[0] & 0xf0) >> 4
+        if v == 6: print(socket.inet_ntop(socket.AF_INET6, msg[24:40]))
+
         self.proxy.netpkt_handle(bytes(16), msg, proxy.FROM_WAN)
 
     def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
