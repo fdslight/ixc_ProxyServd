@@ -49,7 +49,7 @@ int msk_calc(unsigned char prefix,int is_ipv6,unsigned char *res)
         res[n]=constant;
     }
     
-    if(!b) res[a]=tables[b];
+    if(b) res[a]=tables[b];
 
     return 0;
 }
