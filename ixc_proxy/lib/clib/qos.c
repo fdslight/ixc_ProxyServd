@@ -109,7 +109,7 @@ void qos_pop(void)
 {
     struct qos_slot *slot_first=qos.slot_head;
     struct qos_slot *slot_obj=slot_first;
-    struct qos_slot *slot_old=qos.slot_head;
+    struct qos_slot *slot_old=qos.slot_head,*t;
     struct mbuf *m=NULL,*t;
 
     while(NULL!=slot_obj){
@@ -137,12 +137,16 @@ void qos_pop(void)
         if(slot_obj!=slot_first){
             slot_old->next=slot_obj->next;
             slot_old=slot_obj;
-            slot_obj=slot_obj->next;
+            t=slot_obj->next;
+            slot_obj->next=NULL;
+            slot_obj=t;
             continue;
         }
 
         qos.slot_head=slot_obj->next;
-        slot_obj=slot_obj->next;
+        t=slot_obj->next;
+        slot_obj->next=NULL;
+        slot_obj=t;
         slot_first=qos.slot_head;
         slot_old=slot_first;
     }
