@@ -36,6 +36,8 @@ static void qos_put(struct mbuf *m,unsigned char a,unsigned char b,unsigned char
     slot_obj=qos.slot_objs[slot_no];
 
     if(!slot_obj->is_used){
+        slot_obj->next=NULL;
+        
         slot_obj->is_used=1;
         slot_obj->mbuf_first=m;
         slot_obj->mbuf_last=m;
@@ -136,7 +138,6 @@ void qos_pop(void)
         // 如果不是第一个的处置方式
         if(slot_obj!=slot_first){
             slot_old->next=slot_obj->next;
-            slot_old=slot_obj;
             t_slot=slot_obj->next;
             slot_obj->next=NULL;
             slot_obj=t_slot;
