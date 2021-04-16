@@ -28,7 +28,6 @@ inline static int qos_calc_slot(unsigned char a, unsigned char b, unsigned char 
 
 static void qos_put(struct mbuf *m,unsigned char a,unsigned char b,unsigned char c,unsigned char d)
 {
-    unsigned short id=0;
     int slot_no;
     struct qos_slot *slot_obj;
 
@@ -54,14 +53,14 @@ static void qos_add_for_ip(struct mbuf *m)
 {
     struct netutil_iphdr *iphdr = (struct netutil_iphdr *)(m->data + m->offset);
 
-    ixc_qos_put(m,iphdr->src_addr[3],iphdr->dst_addr[1],iphdr->dst_addr[2],iphdr->dst_addr[3]);
+    qos_put(m,iphdr->src_addr[3],iphdr->dst_addr[1],iphdr->dst_addr[2],iphdr->dst_addr[3]);
 }
 
 static void qos_add_for_ipv6(struct mbuf *m)
 {
     struct netutil_ip6hdr *header=(struct netutil_ip6hdr *)(m->data+m->offset);
 
-    ixc_qos_put(m,header->src_addr[15],header->dst_addr[13],header->dst_addr[14],header->dst_addr[15]);
+    qos_put(m,header->src_addr[15],header->dst_addr[13],header->dst_addr[14],header->dst_addr[15]);
 }
 
 int qos_init(void)
