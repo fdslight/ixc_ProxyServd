@@ -18,22 +18,22 @@ static void qos_sysloop_cb(struct sysloop *lp)
     qos_pop();
 }
 
-inline static int qos_calc_slot(unsigned char a, unsigned char b, unsigned short _id)
+inline static int qos_calc_slot(unsigned char a, unsigned char b, unsigned char c,unsigned char d)
 {
-    unsigned int v= (a << 24) | (b<<16) | _id;
+    unsigned int v= (a << 24) | (b<<16) | (c<<8) | d;
     int slot_num= v % QOS_SLOT_NUM;
 
     return slot_num;
 }
 
-static void qos_put(struct mbuf *m,unsigned c,unsigned char ipproto)
+static void qos_put(struct mbuf *m,unsigned char a,unsigned char b,unsigned char c,unsigned char d)
 {
     unsigned short id=0;
     int slot_no;
     struct qos_slot *slot_obj;
 
     m->next=NULL;
-    slot_no=qos_calc_slot(c,ipproto,id);
+    slot_no=qos_calc_slot(a,b,c,d);
     slot_obj=qos.slot_objs[slot_no];
 
     if(!slot_obj->is_used){
@@ -54,14 +54,14 @@ static void qos_add_for_ip(struct mbuf *m)
 {
     struct netutil_iphdr *iphdr = (struct netutil_iphdr *)(m->data + m->offset);
 
-    qos_put(m,iphdr->dst_addr[3],iphdr->protocol);
+    ixc_qos_put(m,iphdr->src_addr[3],iphdr->dst_addr[1],iphdr->dst_addr[2],iphdr->dst_addr[3]);
 }
 
 static void qos_add_for_ipv6(struct mbuf *m)
 {
     struct netutil_ip6hdr *header=(struct netutil_ip6hdr *)(m->data+m->offset);
 
-    qos_put(m,header->dst_addr[15],header->next_header);
+    ixc_qos_put(m,header->src_addr[15],header->dst_addr[13],header->dst_addr[14],header->dst_addr[15]);
 }
 
 int qos_init(void)
