@@ -15,7 +15,7 @@ static struct map_node *__map_node_get(struct map *m)
 		m->empty_head=node->tmp;
 		node->tmp=NULL;
 	}else{
-		DBG("call malloc for struct map_node\r\n");
+		//DBG("call malloc for struct map_node\r\n");
 
 		node=malloc(sizeof(struct map_node));
 
@@ -81,7 +81,7 @@ void map_release(struct map *m,map_del_func_t fn)
 
 	while(NULL!=node){
 		t=node->list_next;
-		if(NULL!=fn) fn(node->data);
+		if(NULL!=fn && node->is_data_node) fn(node->data);
 		free(node);
 		node=t;
 	}
@@ -285,7 +285,6 @@ void map_each(struct map *m,map_each_func_t fn)
 		//DBG("%d\r\n",node->is_data_node);
 		if(node->is_data_node && NULL!=fn) fn(node->data);
 		node=node->list_next;
-		
 	}
 }
 
