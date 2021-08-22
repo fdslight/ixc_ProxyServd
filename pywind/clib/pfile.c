@@ -15,15 +15,22 @@ void pfile_write(const char *path,pid_t pid)
     fclose(f);
 }
 
-pid_t pfile_read(const char *path)
+pid_t pfile_read(const char *path) 
 {
     pid_t pid;
+    size_t size;
 
     if(access(path,F_OK)<0) return -1;
 
     FILE *f=fopen(path,"r");
 
-    fread(&pid,sizeof(pid_t),1,f);
+    size=fread(&pid,sizeof(pid_t),1,f);
+
+    if(size!=1){
+        fclose(f);
+        return -1;
+    }
+
     fclose(f);
 
     return pid;

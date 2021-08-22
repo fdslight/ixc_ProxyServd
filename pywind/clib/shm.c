@@ -15,13 +15,21 @@ static int shm_key_get_from_file(const char *path)
 {
     FILE *f;
     int id;
+    size_t size;
+
     // 首先检查文件是否存在
     if(access(path,F_OK)){
         STDERR("the shared memory file %s not exists at function %s\r\n",path,__func__);
         return -1;
     }
     f=fopen(path,"r");
-    fread(&id,sizeof(id),1,f);
+    size=fread(&id,sizeof(id),1,f);
+
+    if(size!=1){
+        fclose(f);
+        return -1;
+    }
+
     fclose(f);
     
     return id;

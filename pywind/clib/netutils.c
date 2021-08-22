@@ -28,11 +28,30 @@ int subnet_calc_with_msk_for_ipv6(unsigned char *address,unsigned char *msk,unsi
 }
 #endif
 
+/// ARM NEON指令支持
+#ifdef __aarch64__
+#include<arm_neon.h>
+/// 使用neon优化IPv6子网计算
+static inline
+int subnet_calc_with_msk_for_ipv6(unsigned char *address,unsigned char *msk,unsigned char *res)
+{
+    uint8x16_t ra=vld1q_u8(address);
+    uint8x16_t rb=vld1q_u8(msk);
+
+    ra=vandq_u8(ra,rb);
+    vst1q_u8(res,ra);
+
+    return 0;
+}
+
+#endif
+
+
 int msk_calc(unsigned char prefix,int is_ipv6,unsigned char *res)
 {
     unsigned char a,b,constant=0xff;
     unsigned char tables[]={
-        0,128,192,224,240,248,252,254
+        0,128,192,224,240,248,252,254,255
     };
 
     if(is_ipv6 && prefix>128) return -1;
@@ -69,6 +88,8 @@ int subnet_calc_with_msk(unsigned char *address,unsigned char *msk,int is_ipv6,u
 
     if(is_ipv6){
 #ifdef __x86_64__
+        return subnet_calc_with_msk_for_ipv6(address,msk,res);
+#elif defined(__aarch64__)
         return subnet_calc_with_msk_for_ipv6(address,msk,res);
 #else
         size=16;
@@ -317,4 +338,27 @@ __NETUTIL_COPY_ADDR:
 void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hr,unsigned char new_addr,int is_src)
 {
     
+}
+
+int is_same_subnet(unsigned char *address,unsigned char *subnet,unsigned char prefix,int is_ipv6)
+{
+    unsigned char tmp_addr[16];
+    int size=is_ipv6?16:4;
+
+    subnet_calc_with_prefix(address,prefix,is_ipv6,tmp_addr);
+
+    if(memcmp(tmp_addr,subnet,size)) return 0;
+
+    return 1;
+}
+
+int is_same_subnet_with_msk(unsigned char *address,unsigned char *subnet,unsigned char *mask,int is_ipv6)
+{
+    unsigned char tmp_addr[16];
+    int size=is_ipv6?16:4;
+    subnet_calc_with_msk(address,mask,is_ipv6,tmp_addr);
+    
+    if(memcmp(tmp_addr,subnet,size)) return 0;
+
+    return 1;
 }
