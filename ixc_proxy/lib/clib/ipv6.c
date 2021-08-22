@@ -1,5 +1,6 @@
 #include<string.h>
 #include<arpa/inet.h>
+#include<time.h>
 
 #include "ipv6.h"
 #include "ip6unfrag.h"

@@ -1,5 +1,6 @@
 
 #include<string.h>
+#include<time.h>
 
 #include "debug.h"
 #include "static_nat.h"
