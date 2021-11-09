@@ -285,8 +285,12 @@ class proxyd(dispatcher.dispatcher):
                     if session_id == user_id: self.delete_handler(fileno)
                 ''''''
             ''''''
+        tmplist = []
         for _id in udp_conns:
             fd = udp_conns[_id]
+            tmplist.append(fd)
+
+        for fd in tmplist:
             self.delete_handler(fd)
 
     def __config_gateway(self, subnet, prefix, eth_name):
