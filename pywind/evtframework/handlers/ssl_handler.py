@@ -62,6 +62,8 @@ class ssl_handler(tcp_handler.tcp_handler):
             if self.reader.size() > 0:
                 self.tcp_readable()
             if self.handler_exists(self.fileno): self.delete_handler(self.fileno)
+        except ssl.SSLError:
+            self.delete_handler(self.fileno)
 
     def evt_write(self):
         if self.__server_side:
