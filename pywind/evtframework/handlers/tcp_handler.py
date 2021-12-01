@@ -128,11 +128,13 @@ class tcp_handler(handler.handler):
             self.__conn_ok = True
             self.connect_ok()
             return
-        size = self.writer.size()
 
         if self.writer.size() == 0:
             self.tcp_writable()
         if self.writer.size() == 0: return
+
+        size = self.writer.size()
+
         try:
             sent_data = self.writer._getvalue()
             sent_size = self.send(sent_data)
