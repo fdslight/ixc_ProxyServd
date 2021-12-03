@@ -92,7 +92,7 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
     inet_ntop(fa,saddr,src_addr,512);
     inet_ntop(fa,daddr,dst_addr,512);
 
-    arglist=Py_BuildValue("(y#ssHHNNy#)",id,16,src_addr,dst_addr,sport,dport,PyBool_FromLong(is_udplite),PyBool_FromLong(is_ipv6),data,size);
+    arglist=Py_BuildValue("(y#ssHHNNy#)",id,16,src_addr,dst_addr,sport,dport,is_udplite?Py_True:Py_False,is_ipv6?Py_True:Py_False,data,size);
     result=PyObject_CallObject(udp_recv_cb,arglist);
  
     Py_XDECREF(arglist);
