@@ -38,7 +38,7 @@ class server(dispatcher.dispatcher):
         self.__fwd_tb = {}
         self.__fwd_tb_reverse = {}
 
-        self.__configs = configfile.ini_parse_from_file("%s/fdslight_etc/udp_n2n_server.ini" % BASE_DIR)
+        self.__configs = configfile.ini_parse_from_file("%s/ixc_configs/udp_n2n_server.ini" % BASE_DIR)
         self.create_poll()
         self.create()
 
