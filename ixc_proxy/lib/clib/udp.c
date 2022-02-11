@@ -19,9 +19,18 @@ static void __udp_handle_v4(struct mbuf *m)
     struct netutil_udphdr *udphdr=NULL;
 
     unsigned char protocol=header->protocol;
+
     int hdr_len=(header->ver_and_ihl & 0x0f) * 4,is_udplite;
+    int tot_len=ntohs(header->tot_len);
+
     unsigned char saddr[4],daddr[4];
     unsigned short sport,dport;
+
+    // 检查是否是最小UDP头部
+    if(tot_len-hdr_len<=8){
+        mbuf_put(m);
+        return;
+    }
 
     memcpy(saddr,header->src_addr,4);
     memcpy(daddr,header->dst_addr,4);
@@ -46,6 +55,12 @@ static void __udp_handle_v6(struct mbuf *m)
     unsigned char saddr[16],daddr[16];
     unsigned short sport,dport;
     int is_udplite;
+    int payload_len=ntohs(header->payload_len);
+
+    if(payload_len<=8){
+        mbuf_put(m);
+        return;
+    }
 
     memcpy(saddr,header->src_addr,16);
     memcpy(daddr,header->dst_addr,16);

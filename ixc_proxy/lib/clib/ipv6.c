@@ -21,8 +21,8 @@ void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
     struct netutil_ip6_frag_header *frag_header=NULL;
+    int payload_len=ntohs(header->payload_len);
     unsigned char next_header;
-
 
     if(!ipalloc_isset_ip(1)){
         mbuf_put(m);
@@ -34,9 +34,25 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
+    if(m->tail-m->offset!=(payload_len+40)){
+        mbuf_put(m);
+        return;
+    }
+
     m->is_ipv6=1;
     header=(struct netutil_ip6hdr *)(m->data+m->offset);
     next_header=header->next_header;
+
+    if(header->dst_addr[0]==0){
+        mbuf_put(m);
+        return;
+    }
+
+    // 源地址和目标地址不能一样
+    if(!memcmp(header->src_addr,header->dst_addr,16)){
+        mbuf_put(m);
+        return;
+    }
 
     //PRINT_IP6(" ",header->dst_addr);
     

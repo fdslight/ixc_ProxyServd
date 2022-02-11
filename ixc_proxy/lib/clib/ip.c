@@ -25,6 +25,8 @@ void ip_handle(struct mbuf *m)
     unsigned short frag_info,frag_off;
     int mf;
     int tot_len=ntohs(header->tot_len);
+    int hdr_len=0;
+    unsigned char ip_unspec[]={0x00,0x00,0x00,0x00};
 
     // 限制数据包最大长度
     if(m->tail-m->offset>1500){
@@ -44,9 +46,38 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    hdr_len=(header->ver_and_ihl & 0x0f) * 4;
+
     // 首先检查长度是否符合要求
-    if(m->tail-m->offset<tot_len){
+    if(m->tail-m->offset!=tot_len){
         //DBG_FLAGS;
+        mbuf_put(m);
+        return;
+    }
+
+    // 不能存在空的数据包
+    if(hdr_len==tot_len){
+        mbuf_put(m);
+        return;
+    }
+
+    if(!memcmp(header->dst_addr,ip_unspec,4)){
+        mbuf_put(m);
+        return;
+    }
+
+    if(header->dst_addr[0]==127 || header->dst_addr[0]==255){
+        mbuf_put(m);
+        return;
+    }
+
+    if(header->dst_addr[0]>=224 && header->dst_addr[0]<=239){
+        mbuf_put(m);
+        return;
+    }
+
+    // 源地址和目的地址不能一样
+    if(!memcmp(header->src_addr,header->dst_addr,4)){
         mbuf_put(m);
         return;
     }
