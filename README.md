@@ -19,8 +19,11 @@ python3 ixc_install.py ${python3_include_path}
 
 ${python3_include_path}:python3头文件路径，比如/usr/include/python3.9
 
-# 启动
+# 服务端启动
 sudo python3 ixc_server.py -d start
+
+# 中继服务端启动(例子)
+python3 ixc_relay.py --bind=0.0.0.0,8080 --redirect=www.example.com,8443 -p tcp
 
 # 停止
 sudo python3 ixc_server.py -d stop
