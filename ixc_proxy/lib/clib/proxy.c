@@ -396,8 +396,11 @@ proxy_dnat_add(PyObject *self,PyObject *args)
     }
 
     rs=dnat_rule_add(old_buf,new_buf,id,is_ipv6);
+    if(rs!=0){
+        Py_RETURN_FALSE;
+    }
 
-    return PyBool_FromLong(rs);
+    Py_RETURN_TRUE;
 }
 
 static PyObject *
