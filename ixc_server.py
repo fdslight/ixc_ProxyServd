@@ -383,6 +383,7 @@ class proxyd(dispatcher.dispatcher):
 
     def __handle_user_change_signal(self, signum, frame):
         self.__access.handle_user_change_signal()
+        self.dnat_reset()
 
 
 def __start_service(debug):
