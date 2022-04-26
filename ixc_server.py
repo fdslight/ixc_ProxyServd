@@ -75,7 +75,7 @@ class proxyd(dispatcher.dispatcher):
         f.close()
         return json.loads(s)
 
-    def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int, is_dnat: bool, dnat_id: int):
+    def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int):
         # 如果数据来源于LAN那么发送到TUN设备
         if _from == proxy.FROM_LAN:
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
