@@ -335,7 +335,7 @@ __NETUTIL_COPY_ADDR:
     else memcpy(iphdr->dst_addr,new_addr,4);
 }
 
-void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hr,unsigned char new_addr,int is_src)
+void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hr,unsigned char *new_addr,int is_src)
 {
     
 }

@@ -44,7 +44,7 @@ def main():
     if debug:
         cflags = " -I %s -DDEBUG -g -Wall" % argv[0]
     else:
-        cflags = " -I %s -O2 -Wall" % argv[0]
+        cflags = " -I %s -O3 -Wall" % argv[0]
 
     build(cflags)
 
