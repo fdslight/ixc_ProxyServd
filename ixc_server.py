@@ -301,6 +301,7 @@ class proxyd(dispatcher.dispatcher):
             self.delete_handler(fd)
 
     def dnat_reset(self):
+        self.proxy.dnat_enable(True, False)
         dnat_cls = dnat.dnat_rule()
         is_ok, rules = dnat_cls.get_rules()
         if not is_ok: return
