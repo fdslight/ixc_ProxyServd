@@ -178,12 +178,12 @@ int dnat_handle(struct mbuf *mbuf,void *ip_header)
     struct netutil_ip6hdr *ip6hdr=NULL;
     struct netutil_iphdr *iphdr=NULL;
 
-    STDOUT("DNAT enable %d\r\n",dnat_ip_enable);
+    //STDOUT("DNAT enable %d\r\n",dnat_ip_enable);
 
     if(mbuf->is_ipv6 && !dnat_ip6_enable) return 0;
     if(!mbuf->is_ipv6 && !dnat_ip_enable) return 0;
 
-    DBG_FLAGS;
+    //DBG_FLAGS;
     if(mbuf->is_ipv6) {
         ip6hdr=ip_header;
         if(mbuf->from==MBUF_FROM_LAN){
@@ -205,13 +205,7 @@ int dnat_handle(struct mbuf *mbuf,void *ip_header)
         }
     }
 
-    if(mbuf->is_ipv6){
-        PRINT_IP6("PRINT IPv6",addr);
-    }else{
-        PRINT_IP("PRINT IP",addr);
-    }
     rule=map_find(m,(char *)addr,&is_found);
-    DBG_FLAGS;
 
     // 未找到规则的处理方式
     if(NULL==rule) return 0;
