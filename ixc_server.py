@@ -25,7 +25,6 @@ import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
 import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.dnat as dnat
 
 
 class proxyd(dispatcher.dispatcher):
@@ -54,9 +53,6 @@ class proxyd(dispatcher.dispatcher):
     __dns_addr = None
 
     __proxy = None
-
-    # 已经加入的DNAT路由规则
-    __added_dnat_route_rules = None
 
     @property
     def http_configs(self):
@@ -105,7 +101,6 @@ class proxyd(dispatcher.dispatcher):
 
         self.__configs = configs
         self.__debug = debug
-        self.__added_dnat_route_rules = []
 
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
 
@@ -212,8 +207,6 @@ class proxyd(dispatcher.dispatcher):
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
 
-        self.dnat_reset()
-
         if not debug:
             sys.stdout = open(LOG_FILE, "a+")
             sys.stderr = open(ERR_FILE, "a+")
@@ -300,56 +293,6 @@ class proxyd(dispatcher.dispatcher):
         for fd in tmplist:
             self.delete_handler(fd)
 
-    def dnat_reset(self):
-        dnat_cls = dnat.dnat_rule()
-        is_ok, rules = dnat_cls.get_rules()
-        if not is_ok: return
-
-        nat_config = self.__configs["nat"]
-        v_ip_subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
-        v_ip6_subnet, prefix6 = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
-
-        # 检查是否和系统的冲突
-        for old_addr, new_addr, is_ipv6, user_id in rules:
-            if is_ipv6:
-                if netutils.is_subnet(old_addr, prefix6, is_ipv6):
-                    logging.print_error(
-                        "dnat rule conflict with proxy virual_ip6_subnet,it should be different, %s=%s" % (
-                            old_addr, new_addr,))
-                    return
-                ''''''
-            else:
-                if netutils.is_subnet(old_addr, prefix, is_ipv6):
-                    logging.print_error(
-                        "dnat rule conflict with proxy virual_ip_subnet,it should be different, %s=%s" % (
-                            old_addr, new_addr,))
-                    return
-                ''''''
-            ''''''
-
-        # 新改变的规则没有问题那么删除系统路由
-        for ipaddr, is_ipv6 in self.__added_dnat_route_rules:
-            if is_ipv6:
-                cmd = "ip -6 route del %s/128" % ipaddr
-            else:
-                cmd = "ip route del %s/32" % ipaddr
-            os.system(cmd)
-        # 重置DNAT
-        self.proxy.dnat_reset()
-        # 重置之后重新启用DNAT
-        self.proxy.dnat_enable(True, False)
-        # 增加到系统路由
-        for old_addr, new_addr, is_ipv6, user_id in rules:
-            if not self.proxy.dnat_add(old_addr, new_addr, user_id, is_ipv6):
-                logging.print_error("cannot add to dnat rule for %s=%s" % (old_addr, new_addr,))
-                continue
-            # IPv6暂时跳过不支持,局域网支持IPv6无意义
-            if is_ipv6:
-                continue
-            else:
-                os.system("ip route add %s/32 dev %s" % (old_addr, self.__DEVNAME))
-            self.__added_dnat_route_rules.append((old_addr, is_ipv6,))
-
     def __config_gateway(self, subnet, prefix, eth_name):
         """ 配置IPV4网关
         :param subnet:子网
@@ -385,7 +328,6 @@ class proxyd(dispatcher.dispatcher):
 
     def __handle_user_change_signal(self, signum, frame):
         self.__access.handle_user_change_signal()
-        self.dnat_reset()
 
 
 def __start_service(debug):
@@ -445,7 +387,7 @@ def main():
     -u      user_configs            update configs         
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", ["only-dnat"])
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", [])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -455,7 +397,6 @@ def main():
     for k, v in opts:
         if k == "-d": d = v
         if k == "-u": u = v
-        if k == "--only-dnat": only_dnat = True
 
     if not u and not d:
         print(help_doc)

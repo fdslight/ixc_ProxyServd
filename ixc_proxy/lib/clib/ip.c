@@ -10,7 +10,6 @@
 #include "udp.h"
 #include "static_nat.h"
 #include "qos.h"
-#include "dnat.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -78,9 +77,6 @@ void ip_handle(struct mbuf *m)
     }
 
     m->is_ipv6=0;
-
-    // 如果DNAT命中那么直接返回
-    if(dnat_handle(m,header)) return;
 
     // 未设置IP地址丢弃数据包
     if(!ipalloc_isset_ip(0)){

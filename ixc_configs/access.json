@@ -1,8 +1,6 @@
 [
   {
     "username": "test",
-    "password": "test",
-    "dnat_enable": false,
-    "dnat_rule_file": "dnat_rules/example.rule"
+    "password": "test"
   }
 ]

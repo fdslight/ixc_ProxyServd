@@ -21,7 +21,6 @@
 #include "static_nat.h"
 #include "ipalloc.h"
 #include "qos.h"
-#include "dnat.h"
 
 #include "../../../pywind/clib/sysloop.h"
 #include "../../../pywind/clib/netif/tuntap.h"
@@ -110,7 +109,6 @@ proxy_dealloc(proxy_object *self)
     ipunfrag_init();
     static_nat_uninit();
     ipalloc_uninit();
-    dnat_uninit();
 
     sysloop_uninit();
     mbuf_uninit();
@@ -163,12 +161,6 @@ proxy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     rs=ip6unfrag_init();
     if(rs<0){
         STDERR("cannot init ip6unfrag\r\n");
-        return NULL;
-    }
-
-    rs=dnat_init();
-    if(rs<0){
-        STDERR("cannot init DNAT\r\n");
         return NULL;
     }
 
@@ -365,71 +357,6 @@ proxy_ipalloc_subnet_set(PyObject *self,PyObject *args)
 }
 
 static PyObject *
-proxy_dnat_enable(PyObject *self,PyObject *args)
-{
-    int enable,is_ipv6;
-    if(!PyArg_ParseTuple(args,"pp",&enable,&is_ipv6)) return NULL;
-
-    dnat_enable(enable,is_ipv6);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *
-proxy_dnat_add(PyObject *self,PyObject *args)
-{
-    const char *old_addr,*new_addr;
-    int is_ipv6,rs;
-    unsigned char *id;
-    Py_ssize_t id_size;
-    unsigned char old_buf[256],new_buf[256];
-
-    if(!PyArg_ParseTuple(args,"ssy#p",&old_addr,&new_addr,&id,&id_size,&is_ipv6)) return NULL;
-    if(id_size!=16) return NULL;
-
-    if(is_ipv6){
-        inet_pton(AF_INET6,old_addr,old_buf);
-        inet_pton(AF_INET6,new_addr,new_buf);
-    }else{
-        inet_pton(AF_INET,old_addr,old_buf);
-        inet_pton(AF_INET,new_addr,new_buf);
-    }
-
-    rs=dnat_rule_add(old_buf,new_buf,id,is_ipv6);
-    if(rs!=0){
-        Py_RETURN_FALSE;
-    }
-
-    Py_RETURN_TRUE;
-}
-
-static PyObject *
-proxy_dnat_del(PyObject *self,PyObject *args)
-{
-    const char *addr;
-    unsigned char buf[256];
-    int is_ipv6;
-
-    if(!PyArg_ParseTuple(args,"sp",&addr,&is_ipv6)) return NULL;
-
-    if(is_ipv6) inet_pton(AF_INET6,addr,buf);
-    else inet_pton(AF_INET,addr,buf);
-
-    dnat_rule_del_by_old(buf,is_ipv6);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *
-proxy_dnat_reset(PyObject *self,PyObject *args)
-{
-    dnat_uninit();
-    dnat_init();
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *
 proxy_clog_set(PyObject *self,PyObject *args)
 {
     const char *stdout_path,*stderr_path;
@@ -466,11 +393,6 @@ static PyMethodDef proxy_methods[]={
     {"loop",(PyCFunction)proxy_loop,METH_NOARGS,"do loop"},
 
     {"ipalloc_subnet_set",(PyCFunction)proxy_ipalloc_subnet_set,METH_VARARGS,"set ipalloc subnet"},
-
-    {"dnat_enable",(PyCFunction)proxy_dnat_enable,METH_VARARGS,"enable or disable DNAT"},
-    {"dnat_add",(PyCFunction)proxy_dnat_add,METH_VARARGS,"DNAT rule add"},
-    {"dnat_del",(PyCFunction)proxy_dnat_del,METH_VARARGS,"DNAT rule delete"},
-    {"dnat_reset",(PyCFunction)proxy_dnat_reset,METH_VARARGS,"DNAT reset"},
 
     {"clog_set",(PyCFunction)proxy_clog_set,METH_VARARGS,"set C language log path"},
     

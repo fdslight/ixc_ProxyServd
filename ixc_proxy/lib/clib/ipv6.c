@@ -10,7 +10,6 @@
 #include "qos.h"
 #include "ipalloc.h"
 #include "debug.h"
-#include "dnat.h"
 
 #include "../../../pywind/clib/debug.h"
 #include "../../../pywind/clib/netutils.h"
@@ -55,9 +54,6 @@ void ipv6_handle(struct mbuf *m)
         mbuf_put(m);
         return;
     }
-
-    // 如果DNAT命中那么交由DNAT处理
-    if(dnat_handle(m,header)) return;
 
     //PRINT_IP6(" ",header->dst_addr);
     
