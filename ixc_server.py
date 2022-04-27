@@ -301,7 +301,6 @@ class proxyd(dispatcher.dispatcher):
             self.delete_handler(fd)
 
     def dnat_reset(self):
-        self.proxy.dnat_enable(True, False)
         dnat_cls = dnat.dnat_rule()
         is_ok, rules = dnat_cls.get_rules()
         if not is_ok: return
@@ -337,6 +336,8 @@ class proxyd(dispatcher.dispatcher):
             os.system(cmd)
         # 重置DNAT
         self.proxy.dnat_reset()
+        # 重置之后重新启用DNAT
+        self.proxy.dnat_enable(True, False)
         # 增加到系统路由
         for old_addr, new_addr, is_ipv6, user_id in rules:
             if not self.proxy.dnat_add(old_addr, new_addr, user_id, is_ipv6):
