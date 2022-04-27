@@ -215,6 +215,7 @@ int dnat_handle(struct mbuf *mbuf,void *ip_header)
         else rewrite_ip_addr(iphdr,rule->dst_address_new,0);
     }
 
+    DBG_FLAGS;
     memcpy(mbuf->id,rule->id,16);
     netpkt_send(mbuf);
 
