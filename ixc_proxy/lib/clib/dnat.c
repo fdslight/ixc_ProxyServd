@@ -178,7 +178,7 @@ int dnat_handle(struct mbuf *mbuf,void *ip_header)
     struct netutil_ip6hdr *ip6hdr=NULL;
     struct netutil_iphdr *iphdr=NULL;
 
-    DBG_FLAGS;
+    STDOUT("DNAT enable %d\r\n",dnat_ip_enable);
 
     if(mbuf->is_ipv6 && !dnat_ip6_enable) return 0;
     if(!mbuf->is_ipv6 && !dnat_ip_enable) return 0;
