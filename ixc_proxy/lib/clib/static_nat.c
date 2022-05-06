@@ -46,6 +46,11 @@ static void static_nat_handle_v4(struct mbuf *m)
     char key[20];
     int is_src=0,rs;
 
+    if(ipalloc_isset_ip(0)){
+        mbuf_put(m);
+        return;
+    }
+
     if(m->from==MBUF_FROM_LAN) {
         memcpy(key,m->id,16);
         memcpy(&key[16],header->src_addr,4);
@@ -154,6 +159,11 @@ static void static_nat_handle_v6(struct mbuf *m)
     int is_src=0,rs;
 
     //DBG_FLAGS;
+
+    if(ipalloc_isset_ip(1)){
+        mbuf_put(m);
+        return;
+    }
 
     if(m->from==MBUF_FROM_LAN) {
         //DBG_FLAGS;
