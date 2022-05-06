@@ -192,7 +192,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     }
 
     if(r){
-        //DBG_FLAGS;
+        DBG_FLAGS;
         r->up_time=time(NULL);
         rewrite_ip6_addr(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
@@ -258,8 +258,10 @@ static void static_nat_handle_v6(struct mbuf *m)
     memcpy(r->lan_addr2,ip_record->address,16);
     memcpy(r->id,m->id,16);
 
+    DBG_FLAGS;
     rewrite_ip6_addr(header,r->lan_addr2,is_src);
     static_nat_send_next_for_v6(m,header);
+    DBG_FLAGS;
 }
 
 static void static_nat_del_cb(void *data)
