@@ -39,10 +39,10 @@ static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *
 
     switch(header->next_header){
         case 6:
-            csum_ptr=ptr+46;
+            csum_ptr=ptr+56;
             break;
         case 17:
-            csum_ptr=ptr+56;
+            csum_ptr=ptr+46;
             break;
         case 58:
             csum_ptr=ptr+42;
