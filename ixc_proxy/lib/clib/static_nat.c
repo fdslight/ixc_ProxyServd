@@ -412,6 +412,11 @@ void static_nat_uninit(void)
 
 void static_nat_handle(struct mbuf *m)
 {
+    // 限制单个数据包大小
+    if(m->end-m->begin>1500){
+        mbuf_put(m);
+        return;
+    }
     //DBG_FLAGS;
     if(m->is_ipv6) static_nat_handle_v6(m);
     else static_nat_handle_v4(m);
