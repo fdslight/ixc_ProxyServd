@@ -359,10 +359,10 @@ void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hdr,unsigned char *new_addr,int 
 
     switch(ip6hdr->next_header){
         case 6:
-            csum_ptr=ptr+46;
+            csum_ptr=ptr+56;
             break;
         case 17:
-            csum_ptr=ptr+56;
+            csum_ptr=ptr+46;
             break;
         case 58:
             csum_ptr=ptr+42;

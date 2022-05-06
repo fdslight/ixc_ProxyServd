@@ -16,54 +16,6 @@ static int static_nat_is_initialized=0;
 static struct time_wheel static_nat_time_wheel;
 static struct sysloop *static_nat_sysloop=NULL;
 
-/// 重写IPv6地址
-static void static_nat_rewrite_ip6(struct netutil_ip6hdr *header,unsigned char *new_addr,int is_src)
-{
-    unsigned char old_addr[16];
-    unsigned char *csum_ptr;
-    unsigned short csum;
-    unsigned char *ptr=(unsigned char *)(header);
-    unsigned short *old_u16addr,*new_u16addr=(unsigned short *)new_addr;
-
-    int flags=1;
-
-    if(is_src) {
-        memcpy(old_addr,header->src_addr,16);
-        memcpy(header->src_addr,new_addr,16);
-    }else{
-        memcpy(old_addr,header->dst_addr,16);
-        memcpy(header->dst_addr,new_addr,16);    
-    }
-
-    old_u16addr=(unsigned short *)(old_addr);
-
-    switch(header->next_header){
-        case 6:
-            csum_ptr=ptr+56;
-            break;
-        case 17:
-            csum_ptr=ptr+46;
-            break;
-        case 58:
-            csum_ptr=ptr+42;
-            break;
-        default:
-            flags=0;
-            break;
-    }
-
-    // 不需要重写传输层校验和直接跳过
-    if(!flags) return;
-
-    memcpy(&csum,csum_ptr,2);
-
-    for(int n=0;n<8;n++){
-        csum=csum_calc_incre(*old_u16addr++,*new_u16addr++,csum);
-    }
-
-    memcpy(csum_ptr,&csum,2);
-}
-
 static void static_nat_sysloop_cb(struct sysloop *loop)
 {
     //DBG_FLAGS;
@@ -225,7 +177,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN){
         //DBG_FLAGS;
         memcpy(m->id,r->id,16);
-        static_nat_rewrite_ip6(header,r->lan_addr1,is_src);
+        rewrite_ip6_addr(header,r->lan_addr1,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
     }
@@ -233,7 +185,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     if(r){
         //DBG_FLAGS;
         r->up_time=time(NULL);
-        static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
+        rewrite_ip6_addr(header,r->lan_addr2,is_src);
         static_nat_send_next_for_v6(m,header);
         return;
     }
@@ -297,7 +249,7 @@ static void static_nat_handle_v6(struct mbuf *m)
     memcpy(r->lan_addr2,ip_record->address,16);
     memcpy(r->id,m->id,16);
 
-    static_nat_rewrite_ip6(header,r->lan_addr2,is_src);
+    rewrite_ip6_addr(header,r->lan_addr2,is_src);
     static_nat_send_next_for_v6(m,header);
 }
 
