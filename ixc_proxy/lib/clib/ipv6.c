@@ -78,12 +78,13 @@ void ipv6_handle(struct mbuf *m)
             mbuf_put(m);
             return;
         }
-        DBG_FLAGS;
+        //DBG_FLAGS;
         frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
         next_header=frag_header->next_header;
 
         m=ip6unfrag_add(m);
-        DBG_FLAGS;
+        //DBG_FLAGS;
+        if(NULL==m) return;
     }
     
     switch(next_header){
