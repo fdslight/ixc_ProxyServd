@@ -36,6 +36,8 @@ static void ipunfrag_timeout_cb(void *data)
     memcpy(&key[32],&(m->priv_flags),4);
 
     map_del(ip6unfrag.m,key,ip6unfrag_map_del_cb);
+    
+    DBG_FLAGS;
 }
 
 static void ip6unfrag_sysloop_cb(struct sysloop *loop)
