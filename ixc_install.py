@@ -9,7 +9,8 @@ def build(cflags):
     files += sys_build.get_c_files("pywind/clib")
 
     files+=[
-        "pywind/clib/netif/linux_tuntap.c"
+        "pywind/clib/netif/linux_tuntap.c",
+        "pywind/clib/netutils.c",
     ]
 
     sys_build.do_compile(files, "ixc_proxy/lib/proxy.so", cflags, is_shared=True)

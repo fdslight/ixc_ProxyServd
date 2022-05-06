@@ -138,7 +138,6 @@ static void static_nat_handle_v4(struct mbuf *m)
     memcpy(r->id,m->id,16);
 
     rewrite_ip_addr(header,r->lan_addr2,is_src);
-
     static_nat_send_next_for_v4(m,header);
 }
 
