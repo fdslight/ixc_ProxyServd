@@ -28,6 +28,11 @@ void ip_handle(struct mbuf *m)
     int hdr_len=0;
     unsigned char ip_unspec[]={0x00,0x00,0x00,0x00};
 
+    if(!ipalloc_isset_ip(0)){
+        mbuf_put(m);
+        return;
+    }
+    
     // 限制数据包最大长度
     if(m->tail-m->offset>1500){
         mbuf_put(m);

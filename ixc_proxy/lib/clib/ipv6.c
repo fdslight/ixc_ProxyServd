@@ -24,7 +24,7 @@ void ipv6_handle(struct mbuf *m)
     int payload_len=0;
     unsigned char next_header;
 
-    DBG("%d\r\n",ipalloc_isset_ip(1));
+    //DBG("%d\r\n",ipalloc_isset_ip(1));
 
     if(!ipalloc_isset_ip(1)){
         mbuf_put(m);
