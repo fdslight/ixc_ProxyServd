@@ -46,7 +46,7 @@ static void static_nat_handle_v4(struct mbuf *m)
     char key[20];
     int is_src=0,rs;
 
-    if(ipalloc_isset_ip(0)){
+    if(!ipalloc_isset_ip(0)){
         mbuf_put(m);
         return;
     }
@@ -160,7 +160,7 @@ static void static_nat_handle_v6(struct mbuf *m)
 
     //DBG_FLAGS;
 
-    if(ipalloc_isset_ip(1)){
+    if(!ipalloc_isset_ip(1)){
         mbuf_put(m);
         return;
     }
