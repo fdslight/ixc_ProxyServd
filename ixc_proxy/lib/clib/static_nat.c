@@ -186,7 +186,9 @@ static void static_nat_handle_v6(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN){
         //DBG_FLAGS;
         memcpy(m->id,r->id,16);
+        DBG_FLAGS;
         rewrite_ip6_addr(header,r->lan_addr1,is_src);
+        DBG_FLAGS;
         static_nat_send_next_for_v6(m,header);
         return;
     }
