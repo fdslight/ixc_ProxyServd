@@ -248,6 +248,6 @@ int ipalloc_is_lan(unsigned char *address,int is_ipv6)
 inline
 int ipalloc_isset_ip(int is_ipv6)
 {
-    if(is_ipv6) return ipalloc.isset_ip_subnet;
+    if(is_ipv6) return ipalloc.isset_ip6_subnet;
     return ipalloc.isset_ip_subnet;
 }
