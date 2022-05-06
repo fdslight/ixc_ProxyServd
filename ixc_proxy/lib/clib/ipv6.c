@@ -24,7 +24,7 @@ void ipv6_handle(struct mbuf *m)
     int payload_len=0;
     unsigned char next_header;
 
-    //DBG("%d\r\n",ipalloc_isset_ip(1));
+    DBG_FLAGS;
 
     if(!ipalloc_isset_ip(1)){
         mbuf_put(m);
@@ -78,10 +78,12 @@ void ipv6_handle(struct mbuf *m)
             mbuf_put(m);
             return;
         }
+        DBG_FLAGS;
         frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
         next_header=frag_header->next_header;
 
         m=ip6unfrag_add(m);
+        DBG_FLAGS;
     }
     
     switch(next_header){
