@@ -1,5 +1,5 @@
-#ifndef IP2SOCKS_MBUF_H
-#define IP2SOCKS_MBUF_H
+#ifndef IXC_MBUF_H
+#define IXC_MBUF_H
 
 #include<sys/types.h>
 

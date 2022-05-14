@@ -1,5 +1,5 @@
-#ifndef IP2SOCKS_IP_H
-#define IP2SOCKS_IP_H
+#ifndef IXC_IP_H
+#define IXC_IP_H
 
 #include "mbuf.h"
 
