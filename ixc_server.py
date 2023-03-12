@@ -199,7 +199,7 @@ class proxyd(dispatcher.dispatcher):
         eth_name = nat_config["eth_name"]
 
         if enable_ipv6:
-            self.__config_gateway6(subnet, prefix)
+            self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
@@ -224,6 +224,18 @@ class proxyd(dispatcher.dispatcher):
     @property
     def proxy(self):
         return self.__proxy
+
+    def read_os_default_v6_router(self):
+        """获取操作系统默认IPv6路由
+        """
+        f = os.popen("ip -6 route | grep default | awk -F ' ' '{print $3}'")
+        router_address = f.read()
+        router_address = router_address.replace("\n", "")
+        router_address = router_address.replace("\r", "")
+        f.close()
+        if not router_address: return None
+
+        return router_address
 
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
@@ -310,11 +322,18 @@ class proxyd(dispatcher.dispatcher):
         os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
         os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
 
-    def __config_gateway6(self, subnet, prefix):
+    def __config_gateway6(self, subnet, prefix, eth_name):
+        router_address = self.read_os_default_v6_router()
+
         os.system("ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME))
         os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
         os.system("ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,))
         os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
+
+        # 检查IPv6网关是否存在,修改机器网络参数后,IPv6默认网关可能消失
+        router_address2 = self.read_os_default_v6_router()
+        if not router_address2:
+            if not router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
 
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns_fileno):
