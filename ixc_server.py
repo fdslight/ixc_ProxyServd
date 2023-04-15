@@ -333,7 +333,7 @@ class proxyd(dispatcher.dispatcher):
         # 检查IPv6网关是否存在,修改机器网络参数后,IPv6默认网关可能消失
         router_address2 = self.read_os_default_v6_router()
         if not router_address2:
-            if not router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
+            if router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
 
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns_fileno):
