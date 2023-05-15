@@ -198,6 +198,15 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         upgrade = self.get_http_kv_value("upgrade", kv_pairs)
         origin = self.get_http_kv_value("origin", kv_pairs)
 
+        real_ip_keys = (
+            "x-real-ip", "x-forwarded-for",
+        )
+        for name in real_ip_keys:
+            real_ip = self.get_http_kv_value(name, kv_pairs)
+            if real_ip: break
+
+        if real_ip: logging.print_general("http_request_from:%s" % real_ip)
+
         if upgrade != "websocket" and method != "GET":
             logging.print_general("http_handshake_method_fail:upgrade:%s,method:%s" % (upgrade, method,),
                                   self.__address)
