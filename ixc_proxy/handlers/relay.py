@@ -64,6 +64,10 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     def tcp_readable(self):
         self.__time = time.time()
+        if not self.dispatcher.have_traffic():
+            self.delete_handler(self.fileno)
+            return
+        self.dispatcher.traffic_statistics(self.reader.size())
         self.send_message_to_handler(self.fileno, self.__redirect_fd, self.reader.read())
 
     def tcp_writable(self):
@@ -85,6 +89,10 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.set_timeout(self.fileno, 10)
 
     def message_from_handler(self, from_fd, byte_data):
+        if not self.dispatcher.have_traffic():
+            self.delete_handler(self.fileno)
+            return
+        self.dispatcher.traffic_statistics(len(byte_data))
         self.writer.write(byte_data)
         self.add_evt_write(self.fileno)
 

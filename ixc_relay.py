@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import sys, os, getopt
+import sys, os, getopt, json
+import time
 
 BASE_DIR = os.path.dirname(sys.argv[0])
 
@@ -12,10 +13,29 @@ import pywind.evtframework.evt_dispatcher as dispatcher
 import ixc_proxy.handlers.relay as relay
 import ixc_proxy.lib.cfg_check as cfg_check
 
+
 class service(dispatcher.dispatcher):
     __listen_fd = None
+    # 当前流量大小
+    __cur_traffic_size = None
+    __limit_traffic_size = None
+    __fpath = None
+    __up_time = None
+    __begin_time = None
 
-    def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False):
+    def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0):
+        self.__cur_traffic_size = 0
+        self.__up_time = time.time()
+        self.__begin_time = 0
+        # 限制的流量大小单位为GB
+        self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
+        if is_udp:
+            self.__fpath = "%s_%s_relay_udp_traffic.json" % (bind[0], bind[1])
+        else:
+            self.__fpath = "%s_%s_relay_tcp_traffic.json" % (bind[0], bind[1])
+
+        self.load_traffic_statistics()
+
         self.__listen_fd = -1
         self.create_poll()
 
@@ -27,16 +47,67 @@ class service(dispatcher.dispatcher):
         self.__listen_fd = self.create_handler(-1, handler, bind, redirect, listen_is_ipv6=is_ipv6,
                                                redirect_is_ipv6=force_ipv6)
 
+    def traffic_statistics(self, traffic_size):
+        # 限制流量小于0,那么不统计流量
+        if self.__limit_traffic_size <= 0: return
+        self.__cur_traffic_size += traffic_size
+
+    def have_traffic(self):
+        """是否还有流量
+        """
+        if self.__limit_traffic_size <= 0: return True
+        if self.__cur_traffic_size >= self.__limit_traffic_size: return False
+
+        return True
+
+    def load_traffic_statistics(self):
+        if not os.path.isfile(self.__fpath):
+            self.__begin_time = time.time()
+            self.__cur_traffic_size = 0
+            return
+
+        with open(self.__fpath, "r") as f:
+            s = f.read()
+        f.close()
+
+        dic = json.loads(s)
+        self.__begin_time = int(dic["begin_time"])
+        self.__cur_traffic_size = int(dic["traffic_size"])
+
+    def reset_traffic(self):
+        now = time.time()
+        if now - self.__begin_time > 86400 * 30:
+            self.__begin_time = now
+            self.__cur_traffic_size = 0
+            return
+
+    def flush_traffic_statistics(self):
+        s = json.dumps({"begin_time": time.time(), "traffic_size": self.__cur_traffic_size,
+                        "comment_traffic_size": "%sGB" % int(self.__cur_traffic_size / 1024 / 1024 / 1024)})
+        with open(self.__fpath, "w") as f:
+            f.write(s)
+        f.close()
+
+    def myloop(self):
+        now = time.time()
+        # 每隔一段时间刷新流量统计到文件
+        if now - self.__up_time > 10:
+            self.flush_traffic_statistics()
+            self.reset_traffic()
+            self.__up_time = now
+        ''''''
+
     def release(self):
         if self.__listen_fd > 0: self.delete_handler(self.__listen_fd)
 
 
 def main():
     help_doc = """
-    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]
+    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]  [--limit-month-traffic=XXX]
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "6p:", ["nofork", "bind=", "redirect=", "help"])
+        opts, args = getopt.getopt(sys.argv[1:], "6p:",
+                                   ["nofork", "bind=", "redirect=", "help", "limit-month-traffic="])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -50,6 +121,7 @@ def main():
     fork = True
     is_ipv6 = False
     protocol = None
+    limit_month_traffic = "0"
 
     for k, v in opts:
         if k == "-6": force_ipv6 = True
@@ -60,6 +132,7 @@ def main():
             return
         if k == "--nofork": fork = False
         if k == "-p": protocol = v
+        if k == "--limit-month-traffic": limit_month_traffic = v
 
     if not bind_s:
         print("please set bind address")
@@ -75,6 +148,12 @@ def main():
 
     if protocol not in ("tcp", "udp",):
         print("unsupport protocol %s" % protocol)
+        return
+
+    try:
+        limit_month_traffic = int(limit_month_traffic)
+    except ValueError:
+        print("wrong traffic value")
         return
 
     seq = bind_s.split(",")
@@ -122,7 +201,7 @@ def main():
 
     instance = service()
     try:
-        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6)
+        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic)
     except KeyboardInterrupt:
         instance.release()
 
