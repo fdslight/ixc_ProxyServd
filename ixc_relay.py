@@ -83,7 +83,9 @@ class service(dispatcher.dispatcher):
 
     def flush_traffic_statistics(self):
         s = json.dumps({"begin_time": time.time(), "traffic_size": self.__cur_traffic_size,
-                        "comment_traffic_size": "%sGB" % int(self.__cur_traffic_size / 1024 / 1024 / 1024)})
+                        "comment_used_traffic_size": "%sGB" % int(self.__cur_traffic_size / 1024 / 1024 / 1024),
+                        "comment_traffic_limit": "%sGB" % int(self.__limit_traffic_size / 1024 / 1024 / 1024),
+                        })
         with open(self.__fpath, "w") as f:
             f.write(s)
         f.close()
@@ -91,7 +93,7 @@ class service(dispatcher.dispatcher):
     def myloop(self):
         now = time.time()
         # 每隔一段时间刷新流量统计到文件
-        if now - self.__up_time > 10:
+        if now - self.__up_time > 180:
             self.flush_traffic_statistics()
             self.reset_traffic()
             self.__up_time = now
