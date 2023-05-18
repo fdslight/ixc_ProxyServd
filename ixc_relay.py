@@ -12,6 +12,7 @@ sys.path.append(BASE_DIR)
 import pywind.evtframework.evt_dispatcher as dispatcher
 import ixc_proxy.handlers.relay as relay
 import ixc_proxy.lib.cfg_check as cfg_check
+import ixc_proxy.lib.logging as logging
 
 
 class service(dispatcher.dispatcher):
@@ -23,16 +24,23 @@ class service(dispatcher.dispatcher):
     __up_time = None
     __begin_time = None
 
-    def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0):
+    def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
+                  nofork=False):
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
         # 限制的流量大小单位为GB
         self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
         if is_udp:
+            s = "udp"
             self.__fpath = "%s_%s_relay_udp_traffic.json" % (bind[0], bind[1])
         else:
+            s = "tcp"
             self.__fpath = "%s_%s_relay_tcp_traffic.json" % (bind[0], bind[1])
+
+        if not nofork:
+            sys.stdout = open("/tmp/ixc_relay_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
+            sys.stderr = open("/tmp/ixc_relay_err_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
 
         self.load_traffic_statistics()
 
@@ -102,6 +110,11 @@ class service(dispatcher.dispatcher):
     def release(self):
         if self.__listen_fd > 0: self.delete_handler(self.__listen_fd)
 
+        sys.stdout.flush()
+        sys.stderr.flush()
+        sys.stdout.close()
+        sys.stderr.close()
+
 
 def main():
     help_doc = """
@@ -111,6 +124,10 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
                                    ["nofork", "bind=", "redirect=", "help", "limit-month-traffic="])
     except getopt.GetoptError:
+        print(help_doc)
+        return
+
+    if len(sys.argv) < 2:
         print(help_doc)
         return
 
@@ -200,12 +217,19 @@ def main():
 
     is_udp = False
     if protocol == "udp": is_udp = True
+    if fork:
+        nofork = False
+    else:
+        nofork = True
 
     instance = service()
     try:
-        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic)
+        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
+                        nofork=nofork)
     except KeyboardInterrupt:
         instance.release()
+    except:
+        logging.print_error()
 
 
 if __name__ == '__main__': main()

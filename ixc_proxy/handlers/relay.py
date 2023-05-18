@@ -3,6 +3,7 @@ import time, socket
 
 import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.evtframework.handlers.udp_handler as udp_handler
+import ixc_proxy.lib.logging as logging
 
 TIMEOUT = 75
 
@@ -59,6 +60,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
+        logging.print_general("connected_from  %s,%s" % (caddr[0], caddr[1]))
 
         return self.fileno
 
@@ -77,6 +79,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.delete_handler(self.fileno)
 
     def tcp_delete(self):
+        logging.print_general("disconnect from %s,%s" % (self.__caddr[0], self.__caddr[1]))
         self.delete_handler(self.__redirect_fd)
         self.unregister(self.fileno)
         self.close()
