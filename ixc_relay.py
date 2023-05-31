@@ -90,7 +90,7 @@ class service(dispatcher.dispatcher):
             return
 
     def flush_traffic_statistics(self):
-        s = json.dumps({"begin_time": time.time(), "traffic_size": self.__cur_traffic_size,
+        s = json.dumps({"begin_time": self.__begin_time, "traffic_size": self.__cur_traffic_size,
                         "comment_used_traffic_size": "%sGB" % int(self.__cur_traffic_size / 1024 / 1024 / 1024),
                         "comment_traffic_limit": "%sGB" % int(self.__limit_traffic_size / 1024 / 1024 / 1024),
                         })
