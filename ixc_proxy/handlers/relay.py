@@ -82,7 +82,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.delete_handler(self.fileno)
 
     def tcp_delete(self):
-        logging.print_general("disconnect traffic_size:%s from", str(self.__traffic_size),
+        logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
                               (self.__caddr[0], self.__caddr[1],))
         self.delete_handler(self.__redirect_fd)
         self.unregister(self.fileno)
