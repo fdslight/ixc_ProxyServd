@@ -48,9 +48,11 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __redirect_fd = None
 
     __time = None
+    __traffic_size = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False):
         self.__time = time.time()
+        self.__traffic_size = 0
 
         self.set_socket(cs)
         self.__caddr = caddr
@@ -60,7 +62,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
-        logging.print_general("connected_from",(caddr[0], caddr[1],))
+        logging.print_general("connected_from", (caddr[0], caddr[1],))
 
         return self.fileno
 
@@ -69,6 +71,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         if not self.dispatcher.have_traffic():
             self.delete_handler(self.fileno)
             return
+        self.__traffic_size += self.reader.size()
         self.dispatcher.traffic_statistics(self.reader.size())
         self.send_message_to_handler(self.fileno, self.__redirect_fd, self.reader.read())
 
@@ -79,7 +82,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.delete_handler(self.fileno)
 
     def tcp_delete(self):
-        logging.print_general("disconnect from",(self.__caddr[0], self.__caddr[1],))
+        logging.print_general("disconnect traffic_size:%s from", str(self.__traffic_size),
+                              (self.__caddr[0], self.__caddr[1],))
         self.delete_handler(self.__redirect_fd)
         self.unregister(self.fileno)
         self.close()
@@ -95,7 +99,9 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         if not self.dispatcher.have_traffic():
             self.delete_handler(self.fileno)
             return
-        self.dispatcher.traffic_statistics(len(byte_data))
+        size = len(byte_data)
+        self.__traffic_size += size
+        self.dispatcher.traffic_statistics(size)
         self.writer.write(byte_data)
         self.add_evt_write(self.fileno)
 
