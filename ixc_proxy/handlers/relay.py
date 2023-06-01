@@ -52,11 +52,9 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __time = None
     __traffic_size = None
     __http_handshake_ok = None
-    __http_header_ok = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False):
         self.__http_handshake_ok = False
-        self.__http_header_ok = False
 
         self.__time = time.time()
         self.__traffic_size = 0
@@ -87,7 +85,12 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             return
         p += 4
         self.reader._putvalue(rdata[p:])
-
+        s = httputils.build_http1x_resp_header(
+            "200 OK"
+        )
+        self.writer.write(s.encode())
+        self.add_evt_write(self.fileno)
+        self.__http_handshake_ok = False
 
     def tcp_readable(self):
         self.__time = time.time()
