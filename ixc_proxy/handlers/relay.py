@@ -3,8 +3,6 @@ import time, socket
 
 import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.evtframework.handlers.udp_handler as udp_handler
-import pywind.web.lib.httputils as httputils
-
 import ixc_proxy.lib.logging as logging
 
 TIMEOUT = 75
@@ -51,11 +49,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     __time = None
     __traffic_size = None
-    __http_handshake_ok = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False):
-        self.__http_handshake_ok = False
-
         self.__time = time.time()
         self.__traffic_size = 0
 
@@ -71,27 +66,6 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
         return self.fileno
 
-    def do_http_handshake(self):
-        size = self.reader.size()
-        rdata = self.reader.read()
-        p = rdata.find(b"\r\n\r\n")
-        # 限制请求头部长度
-        if p < 0 and size > 4096:
-            self.delete_handler(self.fileno)
-            return
-        if p < 0: return
-        if p == 0:
-            self.delete_handler(self.fileno)
-            return
-        p += 4
-        self.reader._putvalue(rdata[p:])
-        s = httputils.build_http1x_resp_header(
-            "200 OK"
-        )
-        self.writer.write(s.encode())
-        self.add_evt_write(self.fileno)
-        self.__http_handshake_ok = False
-
     def tcp_readable(self):
         self.__time = time.time()
         if not self.dispatcher.have_traffic():
@@ -99,12 +73,6 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             return
         self.__traffic_size += self.reader.size()
         self.dispatcher.traffic_statistics(self.reader.size())
-
-        if self.dispatcher.enable_listen_over_http:
-            if not self.__http_handshake_ok:
-                self.do_http_handshake()
-            if not self.__http_handshake_ok: return
-
         self.send_message_to_handler(self.fileno, self.__redirect_fd, self.reader.read())
 
     def tcp_writable(self):

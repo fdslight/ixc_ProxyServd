@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys, os, getopt, json
-import time, platform
+import time
 
 BASE_DIR = os.path.dirname(sys.argv[0])
 
@@ -24,20 +24,8 @@ class service(dispatcher.dispatcher):
     __up_time = None
     __begin_time = None
 
-    __enable_listen_over_http = False
-    __enable_redirect_over_http = False
-    __redirect_http_header_file = None
-
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
-                  enable_listen_over_http=False,
-                  enable_redirect_over_http=False,
-                  redirect_http_header_file="",
                   nofork=False):
-
-        self.__enable_listen_over_http = enable_listen_over_http
-        self.__enable_redirect_over_http = enable_redirect_over_http
-        self.__redirect_http_header_file = redirect_http_header_file
-
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
@@ -51,19 +39,8 @@ class service(dispatcher.dispatcher):
             self.__fpath = "%s_%s_relay_tcp_traffic.json" % (bind[0], bind[1])
 
         if not nofork:
-            stdout_path = "ixc_relay_%s_%s_%s.log" % (s, bind[0], bind[1])
-            stderr_path = "ixc_relay_err_%s_%s_%s.log" % (s, bind[0], bind[1])
-
-            # 判断操作系统平台
-            if platform.find("win32") >= 0:
-                stdout_path = ".\\%s" % stdout_path
-                stderr_path = ".\\%s" % stderr_path
-            else:
-                stdout_path = "/tmp/%s" % stdout_path
-                stderr_path = "/tmp/%s" % stderr_path
-
-            sys.stdout = open(stdout_path, "w")
-            sys.stderr = open(stderr_path, "w")
+            sys.stdout = open("/tmp/ixc_relay_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
+            sys.stderr = open("/tmp/ixc_relay_err_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
 
         self.load_traffic_statistics()
 
@@ -121,18 +98,6 @@ class service(dispatcher.dispatcher):
             f.write(s)
         f.close()
 
-    @property
-    def enable_listen_over_http(self):
-        return self.__enable_listen_over_http
-
-    @property
-    def enable_redirect_over_http(self):
-        return self.__enable_redirect_over_http
-
-    @property
-    def redirect_http_header_file(self):
-        return self.__redirect_http_header_file
-
     def myloop(self):
         now = time.time()
         # 每隔一段时间刷新流量统计到文件
@@ -153,22 +118,11 @@ class service(dispatcher.dispatcher):
 
 def main():
     help_doc = """
-    --bind=address,port 
-    --redirect=host,port -p tcp | udp [-6] 
-    [--nofork]  
-    [--limit-month-traffic=XXX]
-    [--enable_listen_over_http]
-    [--enable_redirect_over_http]
-    [--redirect_http_header_file=file_path.json]
+    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]  [--limit-month-traffic=XXX]
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
-                                   ["nofork", "bind=", "redirect=", "help",
-                                    "limit-month-traffic=",
-                                    "enable_listen_over_http",
-                                    "enable_redirect_over_http",
-                                    "redirect_http_header_file="
-                                    ])
+                                   ["nofork", "bind=", "redirect=", "help", "limit-month-traffic="])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -188,10 +142,6 @@ def main():
     protocol = None
     limit_month_traffic = "0"
 
-    enable_listen_over_http = False
-    enable_redirect_over_http = False
-    redirect_http_header_file = ""
-
     for k, v in opts:
         if k == "-6": force_ipv6 = True
         if k == "--bind": bind_s = v
@@ -202,12 +152,6 @@ def main():
         if k == "--nofork": fork = False
         if k == "-p": protocol = v
         if k == "--limit-month-traffic": limit_month_traffic = v
-        if k == "--enable_listen_over_http":
-            enable_listen_over_http = True
-        if k == "--enable_redirect_over_http":
-            enable_redirect_over_http = True
-        if k == "--redirect_http_header_file":
-            redirect_http_header_file = v
 
     if not bind_s:
         print("please set bind address")
@@ -263,10 +207,6 @@ def main():
         print("wrong redirect address format")
         return
 
-    if enable_redirect_over_http and not os.path.isfile(redirect_http_header_file):
-        print("not found redirect http header file %s" % redirect_http_header_file)
-        return
-
     if fork:
         pid = os.fork()
         if pid != 0: sys.exit(0)
@@ -284,11 +224,7 @@ def main():
 
     instance = service()
     try:
-        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6,
-                        limit_month_traffic=limit_month_traffic,
-                        enable_listen_over_http=enable_listen_over_http,
-                        enable_redirect_over_http=enable_redirect_over_http,
-                        redirect_http_header_file=redirect_http_header_file,
+        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
                         nofork=nofork)
     except KeyboardInterrupt:
         instance.release()
