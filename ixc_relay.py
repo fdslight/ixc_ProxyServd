@@ -56,8 +56,6 @@ class service(dispatcher.dispatcher):
                                                redirect_is_ipv6=force_ipv6)
 
     def traffic_statistics(self, traffic_size):
-        # 限制流量小于0,那么不统计流量
-        if self.__limit_traffic_size <= 0: return
         self.__cur_traffic_size += traffic_size
 
     def have_traffic(self):
