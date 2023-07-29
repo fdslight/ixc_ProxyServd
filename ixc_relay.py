@@ -88,9 +88,11 @@ class service(dispatcher.dispatcher):
             return
 
     def flush_traffic_statistics(self):
+        t = time.localtime(self.__begin_time)
         s = json.dumps({"begin_time": self.__begin_time, "traffic_size": self.__cur_traffic_size,
                         "comment_used_traffic_size": "%sGB" % int(self.__cur_traffic_size / 1024 / 1024 / 1024),
                         "comment_traffic_limit": "%sGB" % int(self.__limit_traffic_size / 1024 / 1024 / 1024),
+                        "comment_begin_time": "%s" % time.strftime("%Y-%m-%d %H:%M:%S", t)
                         })
         with open(self.__fpath, "w") as f:
             f.write(s)
