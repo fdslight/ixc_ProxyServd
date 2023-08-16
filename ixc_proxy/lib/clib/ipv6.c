@@ -120,7 +120,7 @@ void ipv6_handle(struct mbuf *m)
     }
 
     //限制IPv6 MTU长度
-    if((m->tail-m->offset>ipv6_mtu) && MBUF_FROM_LAN==m->from){
+    if((m->tail-m->offset>ipv6_mtu) && MBUF_FROM_LAN==m->from && next_header==6){
         ipv6_icmpv6_packet_too_big_send(m,header);
         return;
     }
