@@ -54,9 +54,9 @@ static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr
     memcpy(ip6_header->dst_addr,ps_header->dst_addr,16);
 
     memcpy(m->data+m->offset+40,buffer+40,48);
+    ip6_header->next_header=58;
 
     m->end=m->tail=m->offset+88;
-
     m->from=MBUF_FROM_WAN;
 
     qos_add(m);
