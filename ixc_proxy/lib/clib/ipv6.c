@@ -34,6 +34,8 @@ static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr
 
     bzero(ps_header,sizeof(struct netutil_ip6_ps_header));
 
+    ip6_header->dst_addr[0]=88;
+
     memcpy(ps_header->src_addr,ip6_header->dst_addr,16);
     memcpy(ps_header->dst_addr,ip6_header->src_addr,16);
 
