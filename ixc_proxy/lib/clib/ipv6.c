@@ -72,12 +72,6 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
-    //限制IPv6 MTU长度
-    if((m->tail-m->offset>ipv6_mtu) && MBUF_FROM_LAN==m->from && next_header==6){
-        mbuf_put(m);
-        return;
-    }
-
     // 只对LAN重组
     if(next_header==44 && m->from==MBUF_FROM_LAN){
         if(m->tail-m->offset<49){
@@ -88,9 +82,12 @@ void ipv6_handle(struct mbuf *m)
         frag_header=(struct netutil_ip6_frag_header *)(m->data+m->offset+40);
         next_header=frag_header->next_header;
 
-        m=ip6unfrag_add(m);
-        //DBG_FLAGS;
-        if(NULL==m) return;
+        // 只针对udplite和udp分片重组
+        if(17==next_header || 136==next_header){
+            m=ip6unfrag_add(m);
+            //DBG_FLAGS;
+            if(NULL==m) return;
+        }
     }
     
     switch(next_header){
