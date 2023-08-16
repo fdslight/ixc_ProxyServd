@@ -17,6 +17,54 @@
 static int ipv6_mtu=1280;
 static int ipv6_enable_udplite=0;
 
+
+static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr *ip6_header)
+{
+    unsigned char tmp_addr[16];
+    unsigned char buffer[512];
+    struct icmpv6_pmtu_header{
+        unsigned char type;
+        unsigned char code;
+        unsigned short csum;
+        unsigned int mtu;
+    };
+    unsigned short csum;
+
+    struct netutil_ip6_ps_header *ps_header=(struct netutil_ip6_ps_header *)buffer;
+    struct icmpv6_pmtu_header *icmp_header=(struct icmpv6_pmtu_header *)(buffer+40);
+
+    bzero(ps_header,sizeof(struct netutil_ip6_ps_header));
+
+    memcpy(ps_header->src_addr,ip6_header->dst_addr,16);
+    memcpy(ps_header->dst_addr,ip6_header->src_addr,16);
+
+    ps_header->next_header=58;
+    ps_header->length=htons(48);
+
+    icmp_header->type=2;
+    icmp_header->code=0;
+    icmp_header->csum=0;
+    icmp_header->mtu=htonl(ipv6_mtu);
+
+    memcpy(buffer+48,ip6_header,40);
+    
+    csum=csum_calc((unsigned short *)buffer,88);
+    icmp_header->csum=htons(csum);
+
+    memcpy(ip6_header->src_addr,ps_header->src_addr,16);
+    memcpy(ip6_header->dst_addr,ps_header->dst_addr,16);
+
+    memcpy(m->data+m->offset+40,buffer+40,48);
+
+    m->end=m->tail=m->offset+88;
+
+    m->from=MBUF_FROM_WAN;
+
+    qos_add(m);
+
+    DBG_FLAGS;
+}
+
 void ipv6_handle(struct mbuf *m)
 {
     struct netutil_ip6hdr *header;
@@ -69,6 +117,12 @@ void ipv6_handle(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN && (header->next_header==17 || header->next_header==136)){
         //PRINT_IP6(" ",header->dst_addr);
         mbuf_put(m);
+        return;
+    }
+
+    //限制IPv6 MTU长度
+    if(m->tail-m->offset>ipv6_mtu){
+        ipv6_icmpv6_packet_too_big_send(m,header);
         return;
     }
 
