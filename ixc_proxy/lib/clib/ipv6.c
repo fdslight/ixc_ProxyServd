@@ -20,7 +20,6 @@ static int ipv6_enable_udplite=0;
 
 static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr *ip6_header)
 {
-    unsigned char tmp_addr[16];
     unsigned char buffer[512];
     struct icmpv6_pmtu_header{
         unsigned char type;
@@ -121,7 +120,7 @@ void ipv6_handle(struct mbuf *m)
     }
 
     //限制IPv6 MTU长度
-    if(m->tail-m->offset>ipv6_mtu){
+    if((m->tail-m->offset>ipv6_mtu) && MBUF_FROM_LAN==m->from){
         ipv6_icmpv6_packet_too_big_send(m,header);
         return;
     }
