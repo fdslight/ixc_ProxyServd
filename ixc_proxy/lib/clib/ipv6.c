@@ -61,7 +61,7 @@ static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr
 
     qos_add(m);
 
-    DBG_FLAGS;
+    STDERR("ICMP TOO BIG---------------------------------\r\n");
 }
 
 void ipv6_handle(struct mbuf *m)
