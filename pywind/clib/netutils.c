@@ -340,7 +340,7 @@ __NETUTIL_COPY_ADDR:
 void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hdr,unsigned char *new_addr,int is_src)
 {
     unsigned char old_addr[16];
-    unsigned char *csum_ptr;
+    unsigned char *csum_ptr=NULL;
     unsigned short csum;
     unsigned char *ptr=(unsigned char *)(ip6hdr);
     unsigned short *old_u16addr,*new_u16addr=(unsigned short *)new_addr;
