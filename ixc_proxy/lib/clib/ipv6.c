@@ -60,8 +60,8 @@ static void ipv6_icmpv6_packet_too_big_send(struct mbuf *m,struct netutil_ip6hdr
     m->from=MBUF_FROM_WAN;
 
     qos_add(m);
-
-    STDERR("ICMP TOO BIG---------------------------------\r\n");
+    
+    STDERR("ICMP TOO BIG %x---------------------------------\r\n",ip6_header->dst_addr[1]);
 }
 
 void ipv6_handle(struct mbuf *m)
