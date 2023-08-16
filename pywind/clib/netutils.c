@@ -363,7 +363,7 @@ void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hdr,unsigned char *new_addr,int 
     if(next_header==44){
         frag_header=(struct netutil_ip6_frag_header *)(((char *)ip6hdr)+40);
         next_header=frag_header->next_header;
-        x+=40;
+        x+=8;
     }
 
     switch(next_header){
