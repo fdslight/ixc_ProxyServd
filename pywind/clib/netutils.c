@@ -344,8 +344,11 @@ void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hdr,unsigned char *new_addr,int 
     unsigned short csum;
     unsigned char *ptr=(unsigned char *)(ip6hdr);
     unsigned short *old_u16addr,*new_u16addr=(unsigned short *)new_addr;
+    unsigned char next_header=ip6hdr->next_header;
+    struct netutil_ip6_frag_header *frag_header;
 
     int flags=1;
+    int x=40;
 
     if(is_src) {
         memcpy(old_addr,ip6hdr->src_addr,16);
@@ -357,15 +360,23 @@ void rewrite_ip6_addr(struct netutil_ip6hdr *ip6hdr,unsigned char *new_addr,int 
 
     old_u16addr=(unsigned short *)(old_addr);
 
-    switch(ip6hdr->next_header){
+    if(next_header==44){
+        frag_header=(struct netutil_ip6_frag_header *)(((char *)ip6hdr)+40);
+        next_header=frag_header->next_header;
+        x+=40;
+    }
+
+    switch(next_header){
         case 6:
-            csum_ptr=ptr+56;
+            csum_ptr=ptr+x+16;
             break;
         case 17:
-            csum_ptr=ptr+46;
+            csum_ptr=ptr+x+6;
+            break;
+        case 44:
             break;
         case 58:
-            csum_ptr=ptr+42;
+            csum_ptr=ptr+x+2;
             break;
         default:
             flags=0;
