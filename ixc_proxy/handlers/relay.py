@@ -208,6 +208,7 @@ class udp_listener(udp_handler.udp_handler):
         name = "%s-%s" % (address[0], address[1],)
         if name in self.__session_fds_reverse:
             fd = self.__session_fds_reverse[name]
+            print(message)
             self.send_message_to_handler(self.fileno, fd, message)
             return
 
@@ -290,5 +291,6 @@ class redirect_udp_client(udp_handler.udp_handler):
         return
 
     def message_from_handler(self, from_fd, data):
+        print(data,"zzzz")
         self.send(data)
         self.add_evt_write(self.fileno)
