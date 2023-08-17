@@ -292,6 +292,7 @@ class udp_tunnel(udp_handler.udp_handler):
 
     def udp_readable(self, message, address):
         result = self.__decrypt.parse(message)
+        print(result,address)
         if not result: return
 
         session_id, action, byte_data = result
