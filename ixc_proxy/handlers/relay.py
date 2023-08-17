@@ -210,7 +210,6 @@ class udp_listener(udp_handler.udp_handler):
             fd = self.__session_fds_reverse[name]
             self.send_message_to_handler(self.fileno, fd, message)
             return
-        print(message)
         fd = self.create_handler(self.fileno, redirect_udp_client, self.__redirect_address,
                                  is_ipv6=self.__redirect_is_ipv6)
         self.__session_fds[fd] = address
@@ -229,8 +228,9 @@ class udp_listener(udp_handler.udp_handler):
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
-            addr, port = self.__session_fds[from_fd]
-            name = "%s-%s" % (addr, port,)
+            address = self.__session_fds[from_fd]
+            name = "%s-%s" % (address[0],address[1],)
+            self.delete_handler(from_fd)
             del self.__session_fds[from_fd]
             del self.__session_fds_reverse[name]
         return
@@ -276,7 +276,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         self.remove_evt_write(self.fileno)
 
     def udp_error(self):
-        self.handler_ctl(self.fileno, "conn_err")
+        self.handler_ctl(self.__creator, "conn_err")
 
     def udp_delete(self):
         self.unregister(self.fileno)
@@ -286,10 +286,9 @@ class redirect_udp_client(udp_handler.udp_handler):
         t = time.time()
 
         if t - self.__time > TIMEOUT:
-            self.handler_ctl(self.fileno, "conn_err")
+            self.handler_ctl(self.__creator, "conn_err")
         return
 
     def message_from_handler(self, from_fd, data):
-        print(data,"zzzz")
         self.send(data)
         self.add_evt_write(self.fileno)
