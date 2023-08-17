@@ -122,7 +122,7 @@ class proxyd(dispatcher.dispatcher):
 
         # 当使用http模块时,禁用加密模块,直接使用https加密
         if over_http:
-            tcp_crypto = "ixc_proxy.lib.crypto.noany.noany_tcp" % (crypto_mod_name, crypto_mod_name)
+            tcp_crypto = "ixc_proxy.lib.crypto.noany.noany_tcp"
         else:
             tcp_crypto = "ixc_proxy.lib.crypto.%s.%s_tcp" % (crypto_mod_name, crypto_mod_name)
 

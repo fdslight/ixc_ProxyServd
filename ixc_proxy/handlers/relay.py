@@ -269,6 +269,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
+        print(message)
         self.__time = time.time()
         self.send_message_to_handler(self.fileno, self.__creator, message)
 
