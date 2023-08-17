@@ -199,6 +199,7 @@ class udp_listener(udp_handler.udp_handler):
 
         self.set_socket(s)
         self.bind(address)
+        print(address)
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
 
