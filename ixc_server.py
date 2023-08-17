@@ -118,7 +118,13 @@ class proxyd(dispatcher.dispatcher):
 
         crypto_mod_name = conn_config["crypto_module"]
 
-        tcp_crypto = "ixc_proxy.lib.crypto.%s.%s_tcp" % (crypto_mod_name, crypto_mod_name)
+        over_http = bool(int(conn_config["tunnel_over_http"]))
+
+        # 当使用http模块时,禁用加密模块,直接使用https加密
+        if over_http:
+            tcp_crypto = "ixc_proxy.lib.crypto.noany.noany_tcp" % (crypto_mod_name, crypto_mod_name)
+        else:
+            tcp_crypto = "ixc_proxy.lib.crypto.%s.%s_tcp" % (crypto_mod_name, crypto_mod_name)
         udp_crypto = "ixc_proxy.lib.crypto.%s.%s_udp" % (crypto_mod_name, crypto_mod_name)
 
         crypto_configfile = "%s/ixc_configs/%s" % (BASE_DIR, conn_config["crypto_configfile"])
