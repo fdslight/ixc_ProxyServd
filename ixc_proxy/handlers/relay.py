@@ -205,7 +205,7 @@ class udp_listener(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
-        name = "%s-%s" % address
+        name = "%s-%s" % (address[0], address[1],)
         if name in self.__session_fds_reverse:
             fd = self.__session_fds_reverse[name]
             self.send_message_to_handler(self.fileno, fd, message)
@@ -239,8 +239,8 @@ class udp_listener(udp_handler.udp_handler):
         # 找不到直接丢弃数据包
         if from_fd not in self.__session_fds: return
 
-        addr, port = self.__session_fds[from_fd]
-        self.sendto(data, (addr, port,))
+        addr = self.__session_fds[from_fd]
+        self.sendto(data, addr)
         self.add_evt_write(self.fileno)
 
 
