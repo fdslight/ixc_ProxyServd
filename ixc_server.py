@@ -125,6 +125,7 @@ class proxyd(dispatcher.dispatcher):
             tcp_crypto = "ixc_proxy.lib.crypto.noany.noany_tcp" % (crypto_mod_name, crypto_mod_name)
         else:
             tcp_crypto = "ixc_proxy.lib.crypto.%s.%s_tcp" % (crypto_mod_name, crypto_mod_name)
+
         udp_crypto = "ixc_proxy.lib.crypto.%s.%s_udp" % (crypto_mod_name, crypto_mod_name)
 
         crypto_configfile = "%s/ixc_configs/%s" % (BASE_DIR, conn_config["crypto_configfile"])
