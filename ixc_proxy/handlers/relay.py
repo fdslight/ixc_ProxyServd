@@ -190,7 +190,7 @@ class udp_listener(udp_handler.udp_handler):
         else:
             fa = socket.AF_INET
 
-        s = socket.socket(fa, socket.SOCK_STREAM)
+        s = socket.socket(fa, socket.SOCK_DGRAM)
         if listen_is_ipv6: s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -205,7 +205,6 @@ class udp_listener(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
-        print(message,address)
         name = "%s-%s" % (address[0], address[1],)
         if name in self.__session_fds_reverse:
             fd = self.__session_fds_reverse[name]
