@@ -257,7 +257,6 @@ class redirect_udp_client(udp_handler.udp_handler):
         else:
             fa = socket.AF_INET
 
-        print(address)
         s = socket.socket(fa, socket.SOCK_DGRAM)
         if is_ipv6: s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -291,6 +290,5 @@ class redirect_udp_client(udp_handler.udp_handler):
         return
 
     def message_from_handler(self, from_fd, data):
-        print(data)
         self.send(data)
         self.add_evt_write(self.fileno)
