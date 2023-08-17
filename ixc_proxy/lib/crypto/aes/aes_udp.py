@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """UDP版本的AES加密模块"""
 
+"""
 import sys
 sys.path.append("../../../")
+"""
 
-import hashlib
-import os
+import os, hashlib
 
 import ixc_proxy.lib.base_proto.tunnel_udp as tunnel
 import ixc_proxy.lib.crypto.aes._aes_cfb as aes_cfb
@@ -98,6 +99,7 @@ class decrypt(tunnel.parser):
     def config(self, config):
         """重写这个方法,用于协议配置"""
         self.__set_aes_key(config["key"])
+
 
 """
 length = 1500
