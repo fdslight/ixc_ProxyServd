@@ -199,13 +199,13 @@ class udp_listener(udp_handler.udp_handler):
 
         self.set_socket(s)
         self.bind(address)
-        print(address)
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
 
         return self.fileno
 
     def udp_readable(self, message, address):
+        print(message,address)
         name = "%s-%s" % (address[0], address[1],)
         if name in self.__session_fds_reverse:
             fd = self.__session_fds_reverse[name]
