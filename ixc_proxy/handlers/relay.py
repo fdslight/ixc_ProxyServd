@@ -205,6 +205,10 @@ class udp_listener(udp_handler.udp_handler):
         return self.fileno
 
     def udp_readable(self, message, address):
+        if not self.dispatcher.have_traffic():
+            self.delete_handler(self.fileno)
+            return
+        self.dispatcher.traffic_statistics(len(message))
         name = "%s-%s" % (address[0], address[1],)
         if name in self.__session_fds_reverse:
             fd = self.__session_fds_reverse[name]
@@ -236,9 +240,10 @@ class udp_listener(udp_handler.udp_handler):
         return
 
     def message_from_handler(self, from_fd, data):
+        self.dispatcher.traffic_statistics(len(data))
         # 找不到直接丢弃数据包
         if from_fd not in self.__session_fds: return
-
+        
         addr = self.__session_fds[from_fd]
         self.sendto(data, addr)
         self.add_evt_write(self.fileno)
