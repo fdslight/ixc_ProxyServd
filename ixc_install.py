@@ -4,7 +4,7 @@ import os, sys
 import pywind.lib.sys_build as sys_build
 
 
-def found_python_include_path():
+def find_python_include_path():
     files = os.listdir("/usr/include")
     result = ""
 
@@ -55,7 +55,7 @@ def main():
         print(help_doc)
         return
 
-    if not python3_include: python3_include = found_python_include_path()
+    if not python3_include: python3_include = find_python_include_path()
 
     if not os.path.isdir(python3_include):
         print("ERROR:not found python3 header file %s" % python3_include)
