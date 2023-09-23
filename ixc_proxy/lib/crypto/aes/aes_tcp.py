@@ -10,6 +10,7 @@ import os
 
 import ixc_proxy.lib.base_proto.tunnel_tcp as tunnel
 import ixc_proxy.lib.crypto.aes._aes_cfb as aes_cfb
+import ixc_proxy.lib.base_proto.utils as proto_utils
 
 FIXED_HEADER_SIZE = 48
 
