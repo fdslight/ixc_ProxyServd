@@ -9,6 +9,7 @@ import hashlib
 import os
 
 import ixc_proxy.lib.base_proto.tunnel_tcp as tunnel
+import ixc_proxy.lib.crypto.aes._aes_cfb as aes_cfb
 
 FIXED_HEADER_SIZE = 48
 
