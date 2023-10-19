@@ -217,7 +217,7 @@ def main():
             for line in address_list:
                 print(line)
             return
-        udp_heartbeat_address = []
+        udp_heartbeat_address = address_list
 
     seq = redirect_s.split(",")
     if len(seq) != 2:
