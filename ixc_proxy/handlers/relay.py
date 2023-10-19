@@ -267,6 +267,7 @@ class udp_listener(udp_handler.udp_handler):
 
     def udp_timeout(self):
         self.set_timeout(self.fileno, 10)
+        self.send_heartbeat_to_clients()
 
 
 class redirect_udp_client(udp_handler.udp_handler):
