@@ -27,14 +27,6 @@ def parse_from_file(fpath: str, is_ipv6=False):
         p += 1
         port = line[p:]
 
-        if is_ipv6 and not netutils.is_ipv6_address(caddr):
-            err_address.append(line)
-            continue
-
-        if not is_ipv6 and not netutils.is_ipv4_address(caddr):
-            err_address.append(line)
-            continue
-
         if not netutils.is_port_number(port):
             err_address.append(line)
             continue
