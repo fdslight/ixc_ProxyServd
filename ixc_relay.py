@@ -119,7 +119,7 @@ class service(dispatcher.dispatcher):
 
 def main():
     help_doc = """
-    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]  [--limit-month-traffic=XXX][--send-udp-heartbeat]
+    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]  [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
