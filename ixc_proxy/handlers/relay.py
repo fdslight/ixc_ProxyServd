@@ -12,7 +12,7 @@ class tcp_listener(tcp_handler.tcp_handler):
     __redirect_is_ipv6 = None
     __redirect_address = None
 
-    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False):
+    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False, **kwargs):
         if listen_is_ipv6:
             fa = socket.AF_INET6
         else:
@@ -181,9 +181,17 @@ class udp_listener(udp_handler.udp_handler):
     __session_fds = None
     __session_fds_reverse = None
 
-    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False):
+    __udp_heartbeat_address = None
+
+    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
+                  udp_heartbeat_address=None):
         self.__session_fds = {}
         self.__session_fds_reverse = {}
+
+        if not udp_heartbeat_address:
+            self.__udp_heartbeat_address = []
+        else:
+            self.__udp_heartbeat_address = udp_heartbeat_address
 
         if listen_is_ipv6:
             fa = socket.AF_INET6
@@ -201,8 +209,17 @@ class udp_listener(udp_handler.udp_handler):
         self.bind(address)
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
+        self.send_heartbeat_to_clients()
+        self.set_timeout(self.fileno, 10)
 
         return self.fileno
+
+    def send_heartbeat_to_clients(self):
+        """向所有客户端发送一个字节的数据
+        """
+        for c_addr, port in self.__udp_heartbeat_address:
+            self.sendto(b"\0", (c_addr, port,))
+        self.add_evt_write(self.fileno)
 
     def udp_readable(self, message, address):
         if not self.dispatcher.have_traffic():
@@ -233,7 +250,7 @@ class udp_listener(udp_handler.udp_handler):
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
             address = self.__session_fds[from_fd]
-            name = "%s-%s" % (address[0],address[1],)
+            name = "%s-%s" % (address[0], address[1],)
             self.delete_handler(from_fd)
             del self.__session_fds[from_fd]
             del self.__session_fds_reverse[name]
@@ -243,10 +260,13 @@ class udp_listener(udp_handler.udp_handler):
         self.dispatcher.traffic_statistics(len(data))
         # 找不到直接丢弃数据包
         if from_fd not in self.__session_fds: return
-        
+
         addr = self.__session_fds[from_fd]
         self.sendto(data, addr)
         self.add_evt_write(self.fileno)
+
+    def udp_timeout(self):
+        self.set_timeout(self.fileno, 10)
 
 
 class redirect_udp_client(udp_handler.udp_handler):
