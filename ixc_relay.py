@@ -124,7 +124,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
                                    ["nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
-                                    "--udp-heartbeat-file="])
+                                    "udp-heartbeat-file="])
     except getopt.GetoptError:
         print(help_doc)
         return
