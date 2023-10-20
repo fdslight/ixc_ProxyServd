@@ -219,7 +219,10 @@ class udp_listener(udp_handler.udp_handler):
         """向所有客户端发送一个字节的数据
         """
         for c_addr, port in self.__udp_heartbeat_address:
-            self.sendto(b"\0", (c_addr, port,))
+            try:
+                self.sendto(b"\0", (c_addr, port,))
+            except socket.gaierror:
+                continue
         self.add_evt_write(self.fileno)
 
     def udp_readable(self, message, address):
