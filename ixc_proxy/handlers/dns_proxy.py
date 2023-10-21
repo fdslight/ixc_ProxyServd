@@ -64,7 +64,7 @@ class dns_client(udp_handler.udp_handler):
         self.remove_evt_write(self.fileno)
 
     def send_msg(self, _id: bytes, messsage: bytes):
-        if len(messsage) < 8: return
+        if len(messsage) < 12: return
         lan_dns_id, = struct.unpack("!H", messsage[0:2])
 
         flags = False

@@ -25,6 +25,7 @@ import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
 import ixc_proxy.lib.base_proto.utils as proto_utils
+import ixc_proxy.lib.dns as dns_utils
 
 
 class proxyd(dispatcher.dispatcher):
@@ -38,6 +39,7 @@ class proxyd(dispatcher.dispatcher):
     __udp_fileno = -1
     __tcp_fileno = -1
     __dns_fileno = -1
+    __dns6_fileno = -1
 
     __tcp_crypto = None
     __udp_crypto = None
@@ -51,6 +53,7 @@ class proxyd(dispatcher.dispatcher):
 
     __dns_is_ipv6 = None
     __dns_addr = None
+    __dns6_addr = None
 
     __proxy = None
 
@@ -191,6 +194,12 @@ class proxyd(dispatcher.dispatcher):
         self.proxy.mtu_set(self.__ip6_mtu, True)
 
         dns_addr = nat_config["dns"]
+        dnsv6_addr = nat_config["dns6"]
+
+        if not netutils.is_ipv6_address(dnsv6_addr):
+            print("ERROR:wrong dns6 address format")
+            return
+
         if netutils.is_ipv6_address(dns_addr):
             is_ipv6 = True
         else:
@@ -198,8 +207,12 @@ class proxyd(dispatcher.dispatcher):
 
         self.__dns_is_ipv6 = is_ipv6
         self.__dns_addr = dns_addr
+        self.__dns6_addr = dnsv6_addr
 
         self.__dns_fileno = self.create_handler(-1, dns_proxy.dns_client, dns_addr, is_ipv6=is_ipv6)
+
+        if dnsv6_addr != "::":
+            self.__dns6_fileno = self.create_handler(-1, dns_proxy.dns_client, dnsv6_addr, is_ipv6=True)
 
         enable_ipv6 = bool(int(nat_config["enable_nat66"]))
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
@@ -268,7 +281,11 @@ class proxyd(dispatcher.dispatcher):
         self.__access.modify_session(session_id, fileno, address)
 
         if action == proto_utils.ACT_DNS:
-            self.get_handler(self.__dns_fileno).send_msg(session_id, message)
+            # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
+            if self.__dns6_fileno > 0 and dns_utils.is_aaaa_request(message):
+                self.get_handler(self.__dns6_fileno).send_msg(session_id, message)
+            else:
+                self.get_handler(self.__dns_fileno).send_msg(session_id, message)
             return
 
         if action == proto_utils.ACT_IPDATA:
@@ -343,6 +360,8 @@ class proxyd(dispatcher.dispatcher):
             if router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
 
     def __exit(self, signum, frame):
+        if self.handler_exists(self.__dns6_fileno):
+            self.delete_handler(self.__dns6_fileno)
         if self.handler_exists(self.__dns_fileno):
             self.delete_handler(self.__dns_fileno)
         if self.handler_exists(self.__tcp6_fileno):
