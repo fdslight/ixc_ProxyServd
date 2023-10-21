@@ -194,7 +194,7 @@ class proxyd(dispatcher.dispatcher):
         self.proxy.mtu_set(self.__ip6_mtu, True)
 
         dns_addr = nat_config["dns"]
-        dnsv6_addr = nat_config["dns6"]
+        dnsv6_addr = nat_config.get("dns6", "::")
 
         if not netutils.is_ipv6_address(dnsv6_addr):
             print("ERROR:wrong dns6 address format")
