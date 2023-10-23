@@ -12,7 +12,8 @@ python3并且需要安装cryptography模块
 
 # ubuntu/debian安装环境配置
 sudo apt install python3-pip  
-sudo pip3 install cryptography
+sudo pip3 install cryptography  
+sudo pip3 install dnspython3
 
 # 软件编译
 python3 ixc_install.py ${python3_include_path}

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-import sys, getopt, os, signal, importlib, json, socket
+
+
+import sys, getopt, os, signal, importlib, json, socket, struct
+
+try:
+    import dns.message
+except ImportError:
+    print("please install dnspython3 module")
+    sys.exit(-1)
 
 BASE_DIR = os.path.dirname(sys.argv[0])
 
@@ -25,7 +33,7 @@ import ixc_proxy.lib.proxy as proxy
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
 import ixc_proxy.lib.base_proto.utils as proto_utils
-import ixc_proxy.lib.dns as dns_utils
+import ixc_proxy.lib.dns_utils as dns_utils
 
 
 class proxyd(dispatcher.dispatcher):
@@ -54,6 +62,8 @@ class proxyd(dispatcher.dispatcher):
     __dns_is_ipv6 = None
     __dns_addr = None
     __dns6_addr = None
+
+    __enable_dnsv6_drop = None
 
     __proxy = None
 
@@ -218,6 +228,9 @@ class proxyd(dispatcher.dispatcher):
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
         eth_name = nat_config["eth_name"]
 
+        enable_dnsv6_drop = bool(int(nat_config.get("enable_dnsv6_drop", "0")))
+        self.__enable_dnsv6_drop = enable_dnsv6_drop
+
         if enable_ipv6:
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
@@ -257,6 +270,23 @@ class proxyd(dispatcher.dispatcher):
 
         return router_address
 
+    def send_dnsv6_err_msg_to_tunnel(self, _id: bytes, from_msg: bytes):
+        size = len(from_msg)
+        if size < 16: return
+
+        try:
+            msg = dns.message.from_wire(from_msg)
+        except:
+            return
+
+        questions = msg.question
+        q = questions[0]
+
+        host = b".".join(q.name[0:-1]).decode("iso-8859-1")
+        xid, = struct.unpack("!H", from_msg[0:2])
+        drop_msg = dns_utils.build_dns_no_such_name_response(xid, host, is_ipv6=True)
+        self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, drop_msg)
+
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
         # 此处找打用户的文件描述符以及IP地址
@@ -281,13 +311,16 @@ class proxyd(dispatcher.dispatcher):
         self.__access.modify_session(session_id, fileno, address)
 
         if action == proto_utils.ACT_DNS:
-            # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
+            # 存在DNS AAAA请求并且开启DNSv6丢弃那么丢弃数据包
+            if dns_utils.is_aaaa_request(message) and self.__enable_dnsv6_drop:
+                self.send_dnsv6_err_msg_to_tunnel(session_id, message)
+                return
+                # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
             if self.__dns6_fileno > 0 and dns_utils.is_aaaa_request(message):
                 self.get_handler(self.__dns6_fileno).send_msg(session_id, message)
             else:
                 self.get_handler(self.__dns_fileno).send_msg(session_id, message)
             return
-
         if action == proto_utils.ACT_IPDATA:
             self.proxy.netpkt_handle(session_id, message, proxy.FROM_LAN)
             return
