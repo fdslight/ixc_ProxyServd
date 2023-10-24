@@ -331,18 +331,15 @@ class proxyd(dispatcher.dispatcher):
         is_matched, flags = self.__host_match.match(host)
         if not is_matched: return True
 
-        print(flags,is_a,is_aaaa)
         if flags == 0 and is_a:
-            print("AA")
             self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=False)
             return False
 
         if flags == 1 and is_aaaa:
-            print("BB")
             self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=True)
             return False
 
-        return False
+        return True
 
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
