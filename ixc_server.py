@@ -309,7 +309,7 @@ class proxyd(dispatcher.dispatcher):
 
     def is_permitted_dns_request(self, _id: bytes, message: bytes):
         size = len(message)
-        if size < 16: return
+        if size < 16: return False
 
         is_aaaa = dns_utils.is_aaaa_request(message)
         is_a = dns_utils.is_a_request(message)
@@ -319,7 +319,7 @@ class proxyd(dispatcher.dispatcher):
         try:
             msg = dns.message.from_wire(message)
         except:
-            return
+            return False
 
         dns_xid, = struct.unpack("!H", message[0:2])
 
