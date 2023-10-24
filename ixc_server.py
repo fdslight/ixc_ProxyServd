@@ -331,6 +331,7 @@ class proxyd(dispatcher.dispatcher):
         is_matched, flags = self.__host_match.match(host)
         if not is_matched: return True
 
+        print(flags,is_a,is_aaaa)
         if flags == 0 and is_a:
             print("AA")
             self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=False)
