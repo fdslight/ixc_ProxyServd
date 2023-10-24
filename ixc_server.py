@@ -34,6 +34,8 @@ import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.proc as proc
 import ixc_proxy.lib.base_proto.utils as proto_utils
 import ixc_proxy.lib.dns_utils as dns_utils
+import ixc_proxy.lib.file_parser as rule_parser
+import ixc_proxy.lib.host_match as host_match
 
 
 class proxyd(dispatcher.dispatcher):
@@ -63,7 +65,7 @@ class proxyd(dispatcher.dispatcher):
     __dns_addr = None
     __dns6_addr = None
 
-    __enable_dnsv6_drop = None
+    __host_match = None
 
     __proxy = None
 
@@ -109,16 +111,50 @@ class proxyd(dispatcher.dispatcher):
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
+    def load_dns_rules(self):
+        path = "%s/ixc_configs/dns_rules.txt" % BASE_DIR
+
+        self.__host_match.clear()
+
+        if not os.path.isfile(path):
+            logging.print_error("not found file %s" % path)
+            return
+
+        rules = rule_parser.parse_host_file(path)
+        new_rules = []
+        for host, _flags in rules:
+            try:
+                flags = int(_flags)
+            except ValueError:
+                logging.print_error("warning:wrong flags value for dns rule %s:%s" % (host, _flags))
+                continue
+
+            if flags not in (0, 1,):
+                logging.print_error("warning:wrong flags value for dns rule %s:%s" % (host, _flags))
+                continue
+
+            new_rules.append((host, flags,))
+
+        for host, flags in new_rules:
+            if self.__host_match.exists(host):
+                logging.print_error("warning:conflict rule for dns %s" % host)
+                return
+            self.__host_match.add_rule((host, flags,))
+        return
+
     def init_func(self, debug, configs):
         self.create_poll()
 
         self.__configs = configs
         self.__debug = debug
+        # 注意顺序,host_match要先实例化,才能加载DNS规则
+        self.__host_match = host_match.host_match()
+        self.load_dns_rules()
 
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
 
         signal.signal(signal.SIGINT, self.__exit)
-        signal.signal(signal.SIGUSR1, self.__handle_user_change_signal)
+        signal.signal(signal.SIGUSR1, self.__handle_change_signal)
 
         conn_config = self.__configs["listen"]
         mod_name = "ixc_proxy.access.%s" % conn_config["access_module"]
@@ -228,9 +264,6 @@ class proxyd(dispatcher.dispatcher):
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
         eth_name = nat_config["eth_name"]
 
-        enable_dnsv6_drop = bool(int(nat_config.get("enable_dnsv6_drop", "0")))
-        self.__enable_dnsv6_drop = enable_dnsv6_drop
-
         if enable_ipv6:
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
@@ -270,22 +303,43 @@ class proxyd(dispatcher.dispatcher):
 
         return router_address
 
-    def send_dnsv6_err_msg_to_tunnel(self, _id: bytes, from_msg: bytes):
-        size = len(from_msg)
+    def send_dns_err_msg_to_tunnel(self, _id: bytes, dns_xid: int, host: str, is_ipv6=False):
+        drop_msg = dns_utils.build_dns_no_such_name_response(dns_xid, host, is_ipv6=is_ipv6)
+        self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, drop_msg)
+
+    def is_permitted_dns_request(self, _id: bytes, message: bytes):
+        size = len(message)
         if size < 16: return
 
+        is_aaaa = dns_utils.is_aaaa_request(message)
+        is_a = dns_utils.is_a_request(message)
+
+        if not is_aaaa and not is_a: return True
+
         try:
-            msg = dns.message.from_wire(from_msg)
+            msg = dns.message.from_wire(message)
         except:
             return
+
+        dns_xid, = struct.unpack("!H", message[0:2])
 
         questions = msg.question
         q = questions[0]
 
         host = b".".join(q.name[0:-1]).decode("iso-8859-1")
-        xid, = struct.unpack("!H", from_msg[0:2])
-        drop_msg = dns_utils.build_dns_no_such_name_response(xid, host, is_ipv6=True)
-        self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, drop_msg)
+
+        is_matched, flags = self.__host_match.match(host)
+        if not is_matched: return True
+
+        if flags == 0 and is_a:
+            self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=False)
+            return False
+
+        if flags == 1 and is_aaaa:
+            self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=True)
+            return False
+
+        return False
 
     def send_msg_to_tunnel(self, _id: bytes, action: int, message: bytes):
         if not self.__access.session_exists(_id): return
@@ -311,11 +365,9 @@ class proxyd(dispatcher.dispatcher):
         self.__access.modify_session(session_id, fileno, address)
 
         if action == proto_utils.ACT_DNS:
-            # 存在DNS AAAA请求并且开启DNSv6丢弃那么丢弃数据包
-            if dns_utils.is_aaaa_request(message) and self.__enable_dnsv6_drop:
-                self.send_dnsv6_err_msg_to_tunnel(session_id, message)
-                return
-                # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
+            # 检查是否允许DNS请求
+            if not self.is_permitted_dns_request(session_id, message): return
+            # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
             if self.__dns6_fileno > 0 and dns_utils.is_aaaa_request(message):
                 self.get_handler(self.__dns6_fileno).send_msg(session_id, message)
             else:
@@ -404,7 +456,8 @@ class proxyd(dispatcher.dispatcher):
 
         sys.exit(0)
 
-    def __handle_user_change_signal(self, signum, frame):
+    def __handle_change_signal(self, signum, frame):
+        self.load_dns_rules()
         self.__access.handle_user_change_signal()
 
 
