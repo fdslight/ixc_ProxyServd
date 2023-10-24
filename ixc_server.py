@@ -332,10 +332,12 @@ class proxyd(dispatcher.dispatcher):
         if not is_matched: return True
 
         if flags == 0 and is_a:
+            print("AA")
             self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=False)
             return False
 
         if flags == 1 and is_aaaa:
+            print("BB")
             self.send_dns_err_msg_to_tunnel(_id, dns_xid, host, is_ipv6=True)
             return False
 
