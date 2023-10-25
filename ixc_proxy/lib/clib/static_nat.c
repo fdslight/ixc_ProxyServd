@@ -15,6 +15,13 @@ static struct static_nat static_nat;
 static int static_nat_is_initialized=0;
 static struct time_wheel static_nat_time_wheel;
 static struct sysloop *static_nat_sysloop=NULL;
+// IPv4 TCP MSS大小
+static unsigned int ip_tcp_mss=0;
+// IPv6 TCP MSS大小
+static unsigned int ip6_tcp_mss=0;
+
+static void static_nat_modify_ip_tcp_mss(struct netutil_iphdr *header);
+static void static_nat_modify_ip6_tcp_mss(struct netutil_ip6hdr *header);
 
 static void static_nat_sysloop_cb(struct sysloop *loop)
 {
@@ -26,13 +33,88 @@ static void static_nat_sysloop_cb(struct sysloop *loop)
 /// 发送到下一个IPv4节点处理
 static void static_nat_send_next_for_v4(struct mbuf *m,struct netutil_iphdr *header)
 {
+    static_nat_modify_ip_tcp_mss(header);
     qos_add(m);
 }
 
 /// 发送到下一个IPv6节点处理
 static void static_nat_send_next_for_v6(struct mbuf *m,struct netutil_ip6hdr *header)
 {   
+    static_nat_modify_ip6_tcp_mss(header);
     qos_add(m);
+}
+
+
+static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_ipv6)
+{
+    unsigned short csum=ntohs(tcp_header->csum);
+    unsigned char *ptr=(unsigned char *)tcp_header;
+    unsigned short header_len_and_flag=ntohs(tcp_header->header_len_and_flag);
+    int header_size=((header_len_and_flag & 0xf000) >> 12) * 4;
+    int is_syn= (header_len_and_flag & 0x0002) >> 1;
+    unsigned short tcp_mss=0,set_tcp_mss;
+    unsigned char *tcp_opt=ptr+20;
+    unsigned short *tcp_mss_ptr=NULL;
+    unsigned char x,length;
+
+    // 检查是否是SYN报文
+    //DBG_FLAGS;
+    if(!is_syn) return;
+    //DBG_FLAGS;
+    if(header_size<=20) return;
+    //DBG_FLAGS;
+    for(int n=0;n<header_size-20;){
+        x=*tcp_opt++;
+        if(0==x) break;
+        if(1==x) {
+            n+=1;
+            continue;
+        }
+        length=*tcp_opt++;
+        if(2==x){
+            if(4==length) {
+                tcp_mss_ptr=(unsigned short *)(tcp_opt);
+                memcpy(&tcp_mss,tcp_opt,2);
+            }
+            break;
+       } 
+       tcp_opt=tcp_opt+length-2;
+       n+=length;
+    }
+
+    if(0==tcp_mss) return;
+  
+    tcp_mss=ntohs(tcp_mss);
+    
+    if(is_ipv6)set_tcp_mss=ip6_tcp_mss;
+    else set_tcp_mss=ip_tcp_mss;
+
+    if(0==set_tcp_mss) return;
+
+    //DBG("tcp mss %d set tcp mss %d\r\n",tcp_mss,set_tcp_mss);
+
+    // 实际TCP MSS小于设置值,那么不修改
+    if(tcp_mss<=set_tcp_mss) return;
+    //DBG_FLAGS;
+    *tcp_mss_ptr=htons(tcp_mss);
+    csum=csum_calc_incre(tcp_mss,set_tcp_mss,csum);
+    tcp_header->csum=htons(csum);
+
+}
+
+static void static_nat_modify_ip_tcp_mss(struct netutil_iphdr *header)
+{
+    int header_size= (header->ver_and_ihl & 0x0f) * 4;
+    unsigned char *ptr=(unsigned char *)header;
+    struct netutil_tcphdr *tcp_header=NULL;
+
+    if(0==ip_tcp_mss) return;
+    if(6!=header->protocol) return;
+
+    ptr=ptr+header_size;
+
+    tcp_header=(struct netutil_tcphdr *)ptr;
+    static_nat_tcp_mss_modify(tcp_header,0);
 }
 
 
@@ -67,7 +149,6 @@ static void static_nat_handle_v4(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN){
         memcpy(m->id,r->id,16);
         rewrite_ip_addr(header,r->lan_addr1,is_src);
-
         static_nat_send_next_for_v4(m,header);
         return;
     }
@@ -139,6 +220,19 @@ static void static_nat_handle_v4(struct mbuf *m)
 
     rewrite_ip_addr(header,r->lan_addr2,is_src);
     static_nat_send_next_for_v4(m,header);
+}
+
+static void static_nat_modify_ip6_tcp_mss(struct netutil_ip6hdr *header)
+{
+    unsigned char *ptr=(unsigned char *)header;
+    struct netutil_tcphdr *tcp_header=NULL;
+
+    if(0==ip6_tcp_mss) return;
+    if(6!=header->next_header) return;
+
+    ptr=ptr+40;
+    tcp_header=(struct netutil_tcphdr *)ptr;
+    static_nat_tcp_mss_modify(tcp_header,1);
 }
 
 
@@ -250,10 +344,10 @@ static void static_nat_handle_v6(struct mbuf *m)
     memcpy(r->lan_addr2,ip_record->address,16);
     memcpy(r->id,m->id,16);
 
-    DBG_FLAGS;
+    //DBG_FLAGS;
     rewrite_ip6_addr(header,r->lan_addr2,is_src);
     static_nat_send_next_for_v6(m,header);
-    DBG_FLAGS;
+    //DBG_FLAGS;
 }
 
 static void static_nat_del_cb(void *data)
@@ -390,8 +484,11 @@ int static_nat_init(void)
         return -1;
     }
     static_nat.natv4_wan2lan=m;
-
     static_nat_is_initialized=1;
+
+    ip_tcp_mss=0;
+    ip6_tcp_mss=0;
+
     return 0;
 }
 
@@ -426,4 +523,32 @@ void static_nat_handle(struct mbuf *m)
 int static_nat_bind(unsigned char *id,unsigned char *address,int is_ipv6)
 {
     return 0;
+}
+
+int static_nat_modify_tcp_mss(unsigned int mss,int is_ipv6)
+{
+    // 限制IPv6的tcp mss
+    if(is_ipv6 && mss>1440) {
+        STDERR("wrong IPv6 TCP MSS value %u\r\n",mss);
+        return 0;
+    }
+    if(is_ipv6 && mss<516){
+        STDERR("wrong IPv6 TCP MSS value %u\r\n",mss);
+        return 0;
+    }
+
+    if(!is_ipv6 && mss>1460) {
+        STDERR("wrong IPv6 TCP MSS value %u\r\n",mss);
+        return 0;
+    }
+
+    if(!is_ipv6 && mss<536){
+        STDERR("wrong IPv6 TCP MSS value %u\r\n",mss);
+        return 0;
+    }
+
+    if(is_ipv6) ip6_tcp_mss=mss;
+    else ip_tcp_mss=mss;
+
+    return 1;
 }
