@@ -44,8 +44,9 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
 {
     unsigned short csum=ntohs(tcp_header->csum);
     unsigned char *ptr=(unsigned char *)tcp_header;
+    unsigned short header_len_and_flag=ntohs(tcp_header->header_len_and_flag);
     int header_size=((tcp_header->header_len_and_flag & 0xf000) >> 12) * 4;
-    int is_syn= (tcp_header->header_len_and_flag & 0x0002) >> 1;
+    int is_syn= (header_len_and_flag & 0x0002) >> 1;
     unsigned short tcp_mss=0,set_tcp_mss;
     unsigned char *tcp_opt=ptr+20;
     unsigned char x,length;
