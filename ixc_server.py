@@ -236,8 +236,34 @@ class proxyd(dispatcher.dispatcher):
         except KeyError:
             self.__ip6_mtu = 1280
 
+        if self.__ip4_mtu < 576 or self.__ip4_mtu > 1500:
+            print("ERROR:Wrong IPv4 MTU value %s" % self.__ip4_mtu)
+            return
+
+        if self.__ip6_mtu < 576 or self.__ip6_mtu > 1500:
+            print("ERROR:Wrong IPv6 MTU value %s" % self.__ip4_mtu)
+            return
+
+        ip_tcp_mss = nat_config.get("ip_tcp_mss", 1460)
+        ip6_tcp_mss = nat_config.get("ip6_tcp_mss", 1440)
+
+        try:
+            ip_tcp_mss = int(ip_tcp_mss)
+        except ValueError:
+            print("ERROR:wrong ip tcp mss value %s,range is 536 to 1460" % ip_tcp_mss)
+            return
+
+        try:
+            ip6_tcp_mss = int(ip6_tcp_mss)
+        except ValueError:
+            print("ERROR:wrong ip tcp mss value %s,range is 516 to 1440" % ip6_tcp_mss)
+            return
+
         self.proxy.mtu_set(self.__ip4_mtu, False)
         self.proxy.mtu_set(self.__ip6_mtu, True)
+
+        self.proxy.tcp_mss_set(ip_tcp_mss, False)
+        self.proxy.tcp_mss_set(ip6_tcp_mss, True)
 
         dns_addr = nat_config["dns"]
         dnsv6_addr = nat_config.get("dns6", "::")

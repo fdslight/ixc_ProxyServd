@@ -215,6 +215,18 @@ proxy_mtu_set(PyObject *self,PyObject *args)
     Py_RETURN_NONE;
 }
 
+static PyObject *
+proxy_tcp_mss_set(PyObject *self,PyObject *args)
+{
+    unsigned short tcp_mss;
+    int is_ipv6,rs;
+    if(!PyArg_ParseTuple(args,"Hp",&tcp_mss,&is_ipv6)) return NULL;
+
+    rs=static_nat_modify_tcp_mss(tcp_mss,is_ipv6);
+
+    return PyBool_FromLong(rs);
+}
+
 /// 处理接收到的网络数据包
 static PyObject *
 proxy_netpkt_handle(PyObject *self,PyObject *args)
@@ -382,6 +394,7 @@ static PyMemberDef proxy_members[]={
 
 static PyMethodDef proxy_methods[]={
     {"mtu_set",(PyCFunction)proxy_mtu_set,METH_VARARGS,"set mtu for IP and IPv6"},
+    {"tcp_mss_set",(PyCFunction)proxy_tcp_mss_set,METH_VARARGS,"set tcp mss "},
 
     {"netpkt_handle",(PyCFunction)proxy_netpkt_handle,METH_VARARGS,"handle ip data packet"},
 
