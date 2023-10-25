@@ -62,6 +62,12 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
     if(!is_syn) return;
     //DBG_FLAGS;
     if(header_size<=20) return;
+
+    if(is_ipv6)set_tcp_mss=ip6_tcp_mss;
+    else set_tcp_mss=ip_tcp_mss;
+
+    if(0==set_tcp_mss) return;
+
     //DBG_FLAGS;
     for(int n=0;n<header_size-20;){
         x=*tcp_opt++;
@@ -86,10 +92,7 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
   
     tcp_mss=ntohs(tcp_mss);
     
-    if(is_ipv6)set_tcp_mss=ip6_tcp_mss;
-    else set_tcp_mss=ip_tcp_mss;
 
-    if(0==set_tcp_mss) return;
 
     //DBG("tcp mss %d set tcp mss %d\r\n",tcp_mss,set_tcp_mss);
 
@@ -527,6 +530,7 @@ int static_nat_bind(unsigned char *id,unsigned char *address,int is_ipv6)
 
 int static_nat_modify_tcp_mss(unsigned int mss,int is_ipv6)
 {
+    if(0==mss) return 1;
     // 限制IPv6的tcp mss
     if(is_ipv6 && mss>1440) {
         STDERR("wrong IPv6 TCP MSS value %u\r\n",mss);
