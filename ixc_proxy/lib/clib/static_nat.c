@@ -73,10 +73,12 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
   
     tcp_mss=ntohs(tcp_mss);
     
-    DBG("tcp mss %d\r\n",tcp_mss);
-
     if(is_ipv6)set_tcp_mss=ip6_tcp_mss;
     else set_tcp_mss=ip_tcp_mss;
+
+    if(0==set_tcp_mss) return;
+
+    DBG("tcp mss %d set tcp mss\r\n",tcp_mss,set_tcp_mss);
 
     // 实际TCP MSS小于设置值,那么不修改
     if(tcp_mss<=set_tcp_mss) return;
