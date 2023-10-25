@@ -38,7 +38,4 @@ void static_nat_handle(struct mbuf *m);
 
 int static_nat_bind(unsigned char *id,unsigned char *address,int is_ipv6);
 
-/// 修改TCP MSS
-int static_nat_modify_tcp_mss(unsigned int mss,int is_ipv6);
-
 #endif
