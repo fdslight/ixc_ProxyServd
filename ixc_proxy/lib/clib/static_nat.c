@@ -91,12 +91,12 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
 
     if(0==set_tcp_mss) return;
 
-    DBG("tcp mss %d set tcp mss %d\r\n",tcp_mss,set_tcp_mss);
+    //DBG("tcp mss %d set tcp mss %d\r\n",tcp_mss,set_tcp_mss);
 
     // 实际TCP MSS小于设置值,那么不修改
     if(tcp_mss<=set_tcp_mss) return;
     //DBG_FLAGS;
-    *tcp_mss_ptr=htons(tcp_mss);
+    *tcp_mss_ptr=htons(set_tcp_mss);
     csum=csum_calc_incre(tcp_mss,set_tcp_mss,csum);
     tcp_header->csum=htons(csum);
 
