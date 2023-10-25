@@ -61,12 +61,13 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
         x=*tcp_opt++;
         if(0==x) break;
         if(1==x) continue;
-        length=*tcp_opt;
+        length=*tcp_opt++;
         if(2==x){
             if(4==length) memcpy(&tcp_mss,tcp_opt,2);
             break;
        } 
        tcp_opt=tcp_opt+length-2;
+       header_size-=length;
     }
 
     if(0==tcp_mss) return;
