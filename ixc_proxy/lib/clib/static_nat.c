@@ -51,9 +51,11 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
     unsigned char x,length;
 
     // 检查是否是SYN报文
+    DBG_FLAGS;
     if(!is_syn) return;
+    DBG_FLAGS;
     if(header_size<=20) return;
-
+    DBG_FLAGS;
     for(int n=0;n<header_size-20;n++){
         x=*tcp_opt++;
         if(0==x) break;
@@ -67,7 +69,7 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
     }
 
     if(0==tcp_mss) return;
-
+    DBG_FLAGS;
     tcp_mss=ntohs(tcp_mss);
 
     if(is_ipv6)set_tcp_mss=ip6_tcp_mss;
@@ -75,7 +77,7 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
 
     // 实际TCP MSS小于设置值,那么不修改
     if(tcp_mss<=set_tcp_mss) return;
-
+    DBG_FLAGS;
     csum=csum_calc_incre(tcp_mss,set_tcp_mss,csum);
 
     tcp_header->csum=htons(csum);
