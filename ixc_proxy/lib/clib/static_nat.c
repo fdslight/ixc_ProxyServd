@@ -57,17 +57,20 @@ static void static_nat_tcp_mss_modify(struct netutil_tcphdr *tcp_header,int is_i
     //DBG_FLAGS;
     if(header_size<=20) return;
     //DBG_FLAGS;
-    for(int n=0;n<header_size-20;n++){
+    for(int n=0;n<header_size-20;){
         x=*tcp_opt++;
         if(0==x) break;
-        if(1==x) continue;
+        if(1==x) {
+            n+=1;
+            continue;
+        }
         length=*tcp_opt++;
         if(2==x){
             if(4==length) memcpy(&tcp_mss,tcp_opt,2);
             break;
        } 
        tcp_opt=tcp_opt+length-2;
-       header_size-=length;
+       n+=length;
     }
 
     if(0==tcp_mss) return;
