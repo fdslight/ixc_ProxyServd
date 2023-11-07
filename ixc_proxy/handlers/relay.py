@@ -62,6 +62,11 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
+        if self.__redirect_fd < 0:
+            logging.print_error(
+                "cannot create redirect socket for redirect %s,%s" % (redirect_addr[0], redirect_addr[1],))
+            self.delete_handler(self.fileno)
+            return
         logging.print_general("connected_from", (caddr[0], caddr[1],))
 
         return self.fileno
@@ -246,6 +251,10 @@ class udp_listener(udp_handler.udp_handler):
             return
         fd = self.create_handler(self.fileno, redirect_udp_client, self.__redirect_address,
                                  is_ipv6=self.__redirect_is_ipv6)
+        if fd < 0:
+            logging.print_error("cannot create redirect udp client for redirect %s,%s" % (
+            self.__redirect_address[0], self.__redirect_address[1],))
+            return
         self.__session_fds[fd] = address
         self.__session_fds_reverse[name] = fd
         self.send_message_to_handler(self.fileno, fd, message)
