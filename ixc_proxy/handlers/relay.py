@@ -131,7 +131,11 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
         s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.set_socket(s)
-        self.connect(address)
+        try:
+            self.connect(address)
+        except socket.gaierror:
+            self.close()
+            return -1
 
         return self.fileno
 
@@ -296,7 +300,11 @@ class redirect_udp_client(udp_handler.udp_handler):
         if is_ipv6: s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.set_socket(s)
-        self.connect(address)
+        try:
+            self.connect(address)
+        except socket.gaierror:
+            self.close()
+            return -1
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
         self.set_timeout(self.fileno, 10)
