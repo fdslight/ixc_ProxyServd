@@ -49,10 +49,10 @@ class tcp_listener(tcp_handler.tcp_handler):
             if self.__redirect_slave_address:
                 if self.__master_node_ok:
                     redirect_address = self.__redirect_address
-                    logging.print_general("use tcp master node", redirect_address)
+                    logging.print_general("use_tcp_master_node", redirect_address)
                 else:
                     redirect_address = self.__redirect_slave_address
-                    logging.print_general("use tcp slave node", redirect_address)
+                    logging.print_general("use_tcp_slave_node", redirect_address)
                     is_slave = True
             else:
                 redirect_address = self.__redirect_address
