@@ -26,7 +26,7 @@ class service(dispatcher.dispatcher):
     __begin_time = None
 
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
-                  nofork=False, udp_heartbeat_address=None):
+                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None):
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
@@ -54,7 +54,8 @@ class service(dispatcher.dispatcher):
             handler = relay.tcp_listener
 
         self.__listen_fd = self.create_handler(-1, handler, bind, redirect, listen_is_ipv6=is_ipv6,
-                                               redirect_is_ipv6=force_ipv6, udp_heartbeat_address=udp_heartbeat_address)
+                                               redirect_is_ipv6=force_ipv6, udp_heartbeat_address=udp_heartbeat_address,
+                                               tcp_redirect_slave=tcp_redirect_slave)
 
     def traffic_statistics(self, traffic_size):
         self.__cur_traffic_size += traffic_size
@@ -119,7 +120,7 @@ class service(dispatcher.dispatcher):
 
 def main():
     help_doc = """
-    --bind=address,port --redirect=host,port -p tcp | udp [-6] [--nofork]  [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
+    --bind=address,port --redirect=host,port -p tcp | udp [--tcp-redirect-slave=host,port][-6] [--nofork]  [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
@@ -145,6 +146,9 @@ def main():
     limit_month_traffic = "0"
     # UDP心跳文件,如果存在此参数并且是UDP协议,那么服务端发送主动心跳
     udp_heartbeat_file = ""
+    # TCP redirect从节点,用于故障切换,只支持TCP协议
+    tcp_redirect_slave_s = None
+    tcp_redirect_slave = None
 
     for k, v in opts:
         if k == "-6": force_ipv6 = True
@@ -157,6 +161,7 @@ def main():
         if k == "-p": protocol = v
         if k == "--limit-month-traffic": limit_month_traffic = v
         if k == "--udp-heartbeat-file": udp_heartbeat_file = v
+        if k == "--tcp-redirect-slave": tcp_redirect_slave_s = v
 
     if not bind_s:
         print("please set bind address")
@@ -207,6 +212,10 @@ def main():
 
     udp_heartbeat_address = []
 
+    if protocol == "udp" and tcp_redirect_slave_s:
+        print("error,udp protocol not support tcp-redirect-slave")
+        return
+
     if protocol == "udp" and udp_heartbeat_file:
         if not os.path.isfile(udp_heartbeat_file):
             print("error,not found udp heartbeat file %s" % udp_heartbeat_file)
@@ -230,6 +239,17 @@ def main():
         print("wrong redirect address format")
         return
 
+    seq = tcp_redirect_slave_s.split(",")
+    if len(seq) != 2:
+        print("wrong tcp-redirect-slave address format")
+        return
+
+    try:
+        tcp_redirect_slave = (seq[0], int(seq[1]),)
+    except ValueError:
+        print("wrong redirect address format")
+        return
+
     if fork:
         pid = os.fork()
         if pid != 0: sys.exit(0)
@@ -248,7 +268,8 @@ def main():
     instance = service()
     try:
         instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
-                        nofork=nofork, udp_heartbeat_address=udp_heartbeat_address)
+                        nofork=nofork, udp_heartbeat_address=udp_heartbeat_address,
+                        tcp_redirect_slave=tcp_redirect_slave)
     except KeyboardInterrupt:
         instance.release()
     except:

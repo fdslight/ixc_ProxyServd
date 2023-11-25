@@ -11,8 +11,11 @@ TIMEOUT = 75
 class tcp_listener(tcp_handler.tcp_handler):
     __redirect_is_ipv6 = None
     __redirect_address = None
+    __redirect_slave_address = None
+    __master_node_ok = None
 
-    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False, **kwargs):
+    def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
+                  tcp_redirect_slave=None, **kwargs):
         if listen_is_ipv6:
             fa = socket.AF_INET6
         else:
@@ -24,6 +27,8 @@ class tcp_listener(tcp_handler.tcp_handler):
 
         self.__redirect_is_ipv6 = redirect_is_ipv6
         self.__redirect_address = redirect_address
+        self.__redirect_slave_address = tcp_redirect_slave
+        self.__master_node_ok = True
 
         self.set_socket(s)
         self.bind(address)
@@ -39,8 +44,25 @@ class tcp_listener(tcp_handler.tcp_handler):
                 cs, caddr = self.accept()
             except BlockingIOError:
                 break
-            self.create_handler(self.fileno, redirect_tcp_handler, cs, caddr, self.__redirect_address,
-                                is_ipv6=self.__redirect_is_ipv6)
+
+            is_slave = False
+            if self.__redirect_slave_address:
+                if self.__master_node_ok:
+                    redirect_address = self.__redirect_address
+                else:
+                    redirect_address = self.__redirect_slave_address
+                    is_slave = True
+            else:
+                redirect_address = self.__redirect_address
+
+            self.create_handler(self.fileno, redirect_tcp_handler, cs, caddr, redirect_address,
+                                is_ipv6=self.__redirect_is_ipv6, is_slave=is_slave)
+            ''''''
+        ''''''
+
+    def tell_master_status(self, is_ok: bool):
+        # 如果未设置从节点的值,那么忽略
+        if self.__redirect_slave_address: self.__master_node_ok = is_ok
 
 
 class redirect_tcp_handler(tcp_handler.tcp_handler):
@@ -49,13 +71,17 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     __time = None
     __traffic_size = None
+    __creator = None
+    __is_slave = None
 
-    def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False):
+    def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_slave=False):
         self.__time = time.time()
         self.__traffic_size = 0
 
         self.set_socket(cs)
         self.__caddr = caddr
+        self.__creator = creator_fd
+        self.__is_slave = is_slave
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
         self.set_timeout(self.fileno, 10)
@@ -112,8 +138,17 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
+            master_ok = False
+            # 让master和slave之间反复切换,如果无法连接
+            if self.__is_slave: master_ok = True
+            self.get_handler(self.__creator).tell_master_status(master_ok)
             self.delete_handler(self.fileno)
             return
+
+        if cmd == "conn_close":
+            self.delete_handler(self.fileno)
+            return
+        ''''''
 
 
 class redirect_tcp_client(tcp_handler.tcp_handler):
@@ -162,7 +197,10 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
             return
 
     def tcp_error(self):
-        self.ctl_handler(self.fileno, self.__creator, "conn_err")
+        cmd = "conn_close"
+        if not self.is_conn_ok():
+            cmd = "conn_err"
+        self.ctl_handler(self.fileno, self.__creator, cmd)
 
     def tcp_delete(self):
         self.unregister(self.fileno)
@@ -193,7 +231,7 @@ class udp_listener(udp_handler.udp_handler):
     __udp_heartbeat_address = None
 
     def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
-                  udp_heartbeat_address=None):
+                  udp_heartbeat_address=None, **kwargs):
         self.__session_fds = {}
         self.__session_fds_reverse = {}
 
@@ -253,7 +291,7 @@ class udp_listener(udp_handler.udp_handler):
                                  is_ipv6=self.__redirect_is_ipv6)
         if fd < 0:
             logging.print_error("cannot create redirect udp client for redirect %s,%s" % (
-            self.__redirect_address[0], self.__redirect_address[1],))
+                self.__redirect_address[0], self.__redirect_address[1],))
             return
         self.__session_fds[fd] = address
         self.__session_fds_reverse[name] = fd
