@@ -125,7 +125,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
                                    ["nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
-                                    "udp-heartbeat-file=","tcp-redirect-slave="])
+                                    "udp-heartbeat-file=", "tcp-redirect-slave="])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -239,17 +239,17 @@ def main():
         print("wrong redirect address format")
         return
 
-    seq = tcp_redirect_slave_s.split(",")
-    if len(seq) != 2:
-        print("wrong tcp-redirect-slave address format")
-        return
-
-    try:
-        tcp_redirect_slave = (seq[0], int(seq[1]),)
-    except ValueError:
-        print("wrong redirect address format")
-        return
-
+    if tcp_redirect_slave_s:
+        seq = tcp_redirect_slave_s.split(",")
+        if len(seq) != 2:
+            print("wrong tcp-redirect-slave address format")
+            return
+        try:
+            tcp_redirect_slave = (seq[0], int(seq[1]),)
+        except ValueError:
+            print("wrong redirect address format")
+            return
+        ''''''
     if fork:
         pid = os.fork()
         if pid != 0: sys.exit(0)
