@@ -28,7 +28,7 @@ class tcp_listener(tcp_handler.tcp_handler):
         self.__redirect_is_ipv6 = redirect_is_ipv6
         self.__redirect_address = redirect_address
         self.__redirect_slave_address = tcp_redirect_slave
-        self.__cur_is_master = False
+        self.__cur_is_master = True
 
         self.set_socket(s)
         self.bind(address)
@@ -45,17 +45,16 @@ class tcp_listener(tcp_handler.tcp_handler):
             except BlockingIOError:
                 break
 
-            is_master = False
+            is_master = self.__cur_is_master
+
             if self.__redirect_slave_address:
                 # 如果不是主节点那么使用主节点
-                if not self.__cur_is_master:
+                if self.__cur_is_master:
                     redirect_address = self.__redirect_address
-                    is_master = True
                     logging.print_general("use_tcp_master_node", redirect_address)
                 else:
                     redirect_address = self.__redirect_slave_address
                     logging.print_general("use_tcp_slave_node", redirect_address)
-                    is_master = False
             else:
                 redirect_address = self.__redirect_address
 
@@ -67,10 +66,11 @@ class tcp_listener(tcp_handler.tcp_handler):
     def tell_is_master(self, is_master: bool):
         # 如果未设置从节点的值,那么忽略
         if self.__redirect_slave_address:
-            self.__cur_is_master = is_master
+            # 进行节点切换
+            self.__cur_is_master = not is_master
         else:
-            # 如果没有设置从节点,那么始终False
-            self.__cur_is_master = False
+            # 如果没有设置从节点,那么始终True
+            self.__cur_is_master = True
 
 
 class redirect_tcp_handler(tcp_handler.tcp_handler):
