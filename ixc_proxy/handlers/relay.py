@@ -12,7 +12,7 @@ class tcp_listener(tcp_handler.tcp_handler):
     __redirect_is_ipv6 = None
     __redirect_address = None
     __redirect_slave_address = None
-    __master_node_ok = None
+    __cur_is_master = None
 
     def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
                   tcp_redirect_slave=None, **kwargs):
@@ -28,7 +28,7 @@ class tcp_listener(tcp_handler.tcp_handler):
         self.__redirect_is_ipv6 = redirect_is_ipv6
         self.__redirect_address = redirect_address
         self.__redirect_slave_address = tcp_redirect_slave
-        self.__master_node_ok = True
+        self.__cur_is_master = False
 
         self.set_socket(s)
         self.bind(address)
@@ -45,26 +45,31 @@ class tcp_listener(tcp_handler.tcp_handler):
             except BlockingIOError:
                 break
 
-            is_slave = False
+            is_master = False
             if self.__redirect_slave_address:
-                if self.__master_node_ok:
+                if not self.__cur_is_master:
                     redirect_address = self.__redirect_address
+                    is_master = True
                     logging.print_general("use_tcp_master_node", redirect_address)
                 else:
                     redirect_address = self.__redirect_slave_address
                     logging.print_general("use_tcp_slave_node", redirect_address)
-                    is_slave = True
+                    is_master = False
             else:
                 redirect_address = self.__redirect_address
 
             self.create_handler(self.fileno, redirect_tcp_handler, cs, caddr, redirect_address,
-                                is_ipv6=self.__redirect_is_ipv6, is_slave=is_slave)
+                                is_ipv6=self.__redirect_is_ipv6, is_master=is_master)
             ''''''
         ''''''
 
-    def tell_master_status(self, is_ok: bool):
+    def tell_is_master(self, is_master: bool):
         # 如果未设置从节点的值,那么忽略
-        if self.__redirect_slave_address: self.__master_node_ok = is_ok
+        if self.__redirect_slave_address:
+            self.__cur_is_master = is_master
+        else:
+            # 如果没有设置从节点,那么始终False
+            self.__cur_is_master = False
 
 
 class redirect_tcp_handler(tcp_handler.tcp_handler):
@@ -74,16 +79,16 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __time = None
     __traffic_size = None
     __creator = None
-    __is_slave = None
+    __is_master = None
 
-    def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_slave=False):
+    def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_master=False):
         self.__time = time.time()
         self.__traffic_size = 0
 
         self.set_socket(cs)
         self.__caddr = caddr
         self.__creator = creator_fd
-        self.__is_slave = is_slave
+        self.__is_master = is_master
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
         self.set_timeout(self.fileno, 10)
@@ -139,11 +144,9 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.add_evt_write(self.fileno)
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
+        self.get_handler(self.__creator).tell_is_master(self.__is_master)
+
         if cmd == "conn_err":
-            master_ok = False
-            # 让master和slave之间反复切换,如果无法连接
-            if self.__is_slave: master_ok = True
-            self.get_handler(self.__creator).tell_master_status(master_ok)
             self.delete_handler(self.fileno)
             return
 

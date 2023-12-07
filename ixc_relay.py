@@ -146,7 +146,7 @@ def main():
     limit_month_traffic = "0"
     # UDP心跳文件,如果存在此参数并且是UDP协议,那么服务端发送主动心跳
     udp_heartbeat_file = ""
-    # TCP redirect从节点,用于故障切换,只支持TCP协议
+    # TCP redirect从节点,用于切换,只支持TCP协议
     tcp_redirect_slave_s = None
     tcp_redirect_slave = None
 
