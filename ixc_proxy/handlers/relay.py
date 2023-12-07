@@ -48,7 +48,6 @@ class tcp_listener(tcp_handler.tcp_handler):
             is_master = self.__cur_is_master
 
             if self.__redirect_slave_address:
-                # 如果不是主节点那么使用主节点
                 if self.__cur_is_master:
                     redirect_address = self.__redirect_address
                     logging.print_general("use_tcp_master_node", redirect_address)
@@ -64,7 +63,7 @@ class tcp_listener(tcp_handler.tcp_handler):
         ''''''
 
     def tell_is_master(self, is_master: bool):
-        # 如果未设置从节点的值,那么忽略
+        print(is_master)
         if self.__redirect_slave_address:
             # 进行节点切换
             self.__cur_is_master = not is_master
