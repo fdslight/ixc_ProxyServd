@@ -63,7 +63,6 @@ class tcp_listener(tcp_handler.tcp_handler):
         ''''''
 
     def tell_is_master(self, is_master: bool):
-        print(is_master)
         if self.__redirect_slave_address:
             # 进行节点切换
             self.__cur_is_master = not is_master
