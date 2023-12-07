@@ -120,6 +120,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.delete_handler(self.fileno)
 
     def tcp_delete(self):
+        self.get_handler(self.__creator).tell_is_master(self.__is_master)
+
         logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
                               (self.__caddr[0], self.__caddr[1],))
         self.delete_handler(self.__redirect_fd)
@@ -144,8 +146,6 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.add_evt_write(self.fileno)
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
-        self.get_handler(self.__creator).tell_is_master(self.__is_master)
-
         if cmd == "conn_err":
             self.delete_handler(self.fileno)
             return
