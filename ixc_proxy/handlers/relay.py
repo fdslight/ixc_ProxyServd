@@ -47,6 +47,7 @@ class tcp_listener(tcp_handler.tcp_handler):
 
             is_master = False
             if self.__redirect_slave_address:
+                # 如果不是主节点那么使用主节点
                 if not self.__cur_is_master:
                     redirect_address = self.__redirect_address
                     is_master = True
