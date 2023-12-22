@@ -98,7 +98,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             logging.print_error(
                 "cannot create redirect socket for redirect %s,%s" % (redirect_addr[0], redirect_addr[1],))
             self.delete_handler(self.fileno)
-            return
+            return -1
         logging.print_general("connected_from", (caddr[0], caddr[1],))
 
         return self.fileno
