@@ -137,10 +137,16 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 if action == proto_utils.ACT_PING:
                     self.send_msg(session_id, self.__address, proto_utils.ACT_PONG, proto_utils.rand_bytes())
                     continue
+
                 # 如果是gzip报文那么首先解压
-                if action == proto_utils.ACT_GZIP_DNS or action == proto_utils.ACT_GZIP_IPDATA:
+                if action in (proto_utils.ACT_GZIP_IPDATA, proto_utils.ACT_GZIP_DNS,):
                     self.__enable_gzip = True
                     message = gzip.decompress(message)
+
+                    if action == proto_utils.ACT_GZIP_IPDATA:
+                        action = proto_utils.ACT_IPDATA
+                    else:
+                        action = proto_utils.ACT_DNS
 
                 self.__update_time = time.time()
                 self.dispatcher.handle_msg_from_tunnel(self.fileno, session_id, self.__address, action, message)
@@ -174,7 +180,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         if self.__over_http and not self.__http_handshake_ok: return
 
         if self.__enable_gzip:
-            if action == proto_utils.ACT_DNS or action == proto_utils.ACT_IPDATA:
+            if action in (proto_utils.ACT_IPDATA, proto_utils.ACT_DNS,):
                 length = len(message)
                 new_msg = gzip.compress(message)
                 comp_length = len(new_msg)
@@ -329,9 +335,12 @@ class udp_tunnel(udp_handler.udp_handler):
 
         if action == proto_utils.ACT_PONG: return
         # 对发送过来的数据包进行解压
-        if action == proto_utils.ACT_GZIP_DNS or action == proto_utils.ACT_GZIP_IPDATA:
+        if action in (proto_utils.ACT_GZIP_IPDATA, proto_utils.ACT_GZIP_DNS,):
             byte_data = gzip.decompress(byte_data)
-
+            if action == proto_utils.ACT_GZIP_IPDATA:
+                action = proto_utils.ACT_IPDATA
+            else:
+                action = proto_utils.ACT_DNS
         self.dispatcher.handle_msg_from_tunnel(self.fileno, session_id, address, action, byte_data)
 
     def udp_writable(self):
