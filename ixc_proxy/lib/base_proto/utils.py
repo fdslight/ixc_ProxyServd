@@ -12,7 +12,14 @@ ACT_PING = 3
 # PONG
 ACT_PONG = 4
 
-ACTS = (ACT_IPDATA, ACT_DNS, ACT_PING, ACT_PONG,)
+# GZIP压缩的IP报文
+ACT_GZIP_IPDATA = 5
+# GZIP压缩的DNS报文
+ACT_GZIP_DNS = 6
+
+ACTS = (ACT_IPDATA, ACT_DNS, ACT_PING, ACT_PONG,
+        ACT_GZIP_IPDATA, ACT_GZIP_DNS,
+        )
 
 
 def rand_bytes(max_size=64):

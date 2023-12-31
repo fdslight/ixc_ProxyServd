@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import socket, time, hashlib
+import socket, time, hashlib, gzip
 
 import pywind.evtframework.handlers.udp_handler as udp_handler
 import pywind.evtframework.handlers.tcp_handler as tcp_handler
@@ -72,6 +72,9 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     __http_auth_id = None
     __http_ws_key = None
 
+    # 是否开启gzip支持,根据客户端请求,如果客户端有发送gzip数据包,那么说明支持
+    __enable_gzip = None
+
     def init_func(self, creator, crypto, crypto_configs, cs, address, conn_timeout, over_http=False):
         http_configs = self.dispatcher.http_configs
 
@@ -83,6 +86,8 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         self.__http_handshake_ok = False
         self.__over_http = over_http
         self.__http_auth_id = http_configs["auth_id"]
+
+        self.__enable_gzip = False
 
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.set_socket(cs)
@@ -132,9 +137,15 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 if action == proto_utils.ACT_PING:
                     self.send_msg(session_id, self.__address, proto_utils.ACT_PONG, proto_utils.rand_bytes())
                     continue
+                # 如果是gzip报文那么首先解压
+                if action == proto_utils.ACT_GZIP_DNS or action == proto_utils.ACT_GZIP_IPDATA:
+                    self.__enable_gzip = True
+                    message = gzip.decompress(message)
 
                 self.__update_time = time.time()
                 self.dispatcher.handle_msg_from_tunnel(self.fileno, session_id, self.__address, action, message)
+            ''''''
+        ''''''
 
     def tcp_writable(self):
         if self.writer.size() == 0: self.remove_evt_write(self.fileno)
@@ -162,6 +173,19 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         # 如果流量加载在HTTP协议上并且没有握手成功那么丢弃数据包
         if self.__over_http and not self.__http_handshake_ok: return
 
+        if self.__enable_gzip:
+            if action == proto_utils.ACT_DNS or action == proto_utils.ACT_IPDATA:
+                length = len(message)
+                new_msg = gzip.compress(message)
+                comp_length = len(new_msg)
+                if comp_length < length:
+                    if action == proto_utils.ACT_DNS:
+                        action = proto_utils.ACT_GZIP_DNS
+                    else:
+                        action = proto_utils.ACT_GZIP_IPDATA
+                    message = new_msg
+                ''''''
+            ''''''
         sent_pkt = self.__encrypt.build_packet(session_id, action, message)
         self.writer.write(sent_pkt)
         self.add_evt_write(self.fileno)
@@ -205,7 +229,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
             real_ip = self.get_http_kv_value(name, kv_pairs)
             if real_ip: break
 
-        if real_ip: logging.print_general("http_request_from:%s" % real_ip,self.__address)
+        if real_ip: logging.print_general("http_request_from:%s" % real_ip, self.__address)
 
         if upgrade != "websocket" and method != "GET":
             logging.print_general("http_handshake_method_fail:upgrade:%s,method:%s" % (upgrade, method,),
@@ -304,6 +328,9 @@ class udp_tunnel(udp_handler.udp_handler):
             return
 
         if action == proto_utils.ACT_PONG: return
+        # 对发送过来的数据包进行解压
+        if action == proto_utils.ACT_GZIP_DNS or action == proto_utils.ACT_GZIP_IPDATA:
+            byte_data = gzip.decompress(byte_data)
 
         self.dispatcher.handle_msg_from_tunnel(self.fileno, session_id, address, action, byte_data)
 
@@ -321,6 +348,18 @@ class udp_tunnel(udp_handler.udp_handler):
         self.close()
 
     def send_msg(self, session_id, address, action, message):
+        # 尝试压缩数据,查看数据能否被压缩,如果被压缩那么使用压缩后的数据
+        if action == proto_utils.ACT_DNS or action == proto_utils.ACT_IPDATA:
+            length = len(message)
+            new_msg = gzip.compress(message)
+            comp_length = len(new_msg)
+            if comp_length < length:
+                if action == proto_utils.ACT_DNS:
+                    action = proto_utils.ACT_GZIP_DNS
+                else:
+                    action = proto_utils.ACT_GZIP_IPDATA
+                message = new_msg
+            ''''''
         ippkts = self.__encrypt.build_packets(session_id, action, message)
         self.__encrypt.reset()
 
