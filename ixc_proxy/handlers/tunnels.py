@@ -141,7 +141,11 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 # 如果是zlib报文那么首先解压
                 if action in (proto_utils.ACT_ZLIB_IPDATA, proto_utils.ACT_ZLIB_DNS,):
                     self.__enable_zlib = True
-                    message = zlib.decompress(message)
+                    try:
+                        message = zlib.decompress(message)
+                    except zlib.error:
+                        self.delete_handler(self.fileno)
+                        return
 
                     if action == proto_utils.ACT_ZLIB_IPDATA:
                         action = proto_utils.ACT_IPDATA
@@ -336,7 +340,10 @@ class udp_tunnel(udp_handler.udp_handler):
         if action == proto_utils.ACT_PONG: return
         # 对发送过来的数据包进行解压
         if action in (proto_utils.ACT_ZLIB_IPDATA, proto_utils.ACT_ZLIB_DNS,):
-            byte_data = zlib.decompress(byte_data)
+            try:
+                byte_data = zlib.decompress(byte_data)
+            except zlib.error:
+                return
             if action == proto_utils.ACT_ZLIB_IPDATA:
                 action = proto_utils.ACT_IPDATA
             else:
