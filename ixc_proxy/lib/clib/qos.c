@@ -18,21 +18,65 @@ static void qos_sysloop_cb(struct sysloop *lp)
     qos_pop();
 }
 
-inline static int qos_calc_slot(unsigned char a, unsigned char b, unsigned char c,unsigned char d)
+inline static int qos_calc_slot(void *header,int is_ipv6)
 {
-    unsigned int v= (a << 24) | (b<<16) | (c<<8) | d;
-    int slot_num= v % QOS_SLOT_NUM;
+    struct netutil_iphdr *iphdr;
+    struct netutil_ip6hdr *ip6hdr;
+    struct netutil_udphdr *udphdr;
+    int hdr_len;
 
-    return slot_num;
+    unsigned long long v;
+    unsigned char next_header,*s=header;
+    unsigned char buf[8]={
+        0,0,0,0,
+        0,0,0,0
+    };
+
+    if(is_ipv6){
+        ip6hdr=header;
+        next_header=ip6hdr->next_header;
+        hdr_len=40;
+        
+        buf[0]=ip6hdr->src_addr[14];
+        buf[1]=ip6hdr->src_addr[15];
+        buf[2]=ip6hdr->dst_addr[14];
+        buf[3]=ip6hdr->dst_addr[15];
+    }else{
+        iphdr=header;
+        next_header=iphdr->protocol;
+        hdr_len=(iphdr->ver_and_ihl & 0x0f) * 4;
+
+        buf[0]=iphdr->src_addr[2];
+        buf[1]=iphdr->src_addr[3];
+        buf[2]=iphdr->dst_addr[2];
+        buf[3]=iphdr->dst_addr[3];
+    }
+
+    switch (next_header){
+        case 6:
+        case 17:
+        case 136:
+            // TCP头部,UDP和UDPLite端口部分定义相同,这里只需要端口部分,直接用UDP协议定义即可
+            udphdr=(struct netutil_udphdr *)(s+hdr_len);
+            
+            memcpy(&buf[4],&(udphdr->src_port),2);
+            memcpy(&buf[6],&(udphdr->dst_port),2);
+        default:
+            break;
+    }
+    
+    memcpy(&v,buf,8);
+
+    return v % QOS_SLOT_NUM;
 }
 
-static void qos_put(struct mbuf *m,unsigned char a,unsigned char b,unsigned char c,unsigned char d)
+static void qos_put(struct mbuf *m,void *header,int is_ipv6)
 {
     int slot_no;
     struct qos_slot *slot_obj;
 
     m->next=NULL;
-    slot_no=qos_calc_slot(a,b,c,d);
+    slot_no=qos_calc_slot(header,is_ipv6);
     slot_obj=qos.slot_objs[slot_no];
 
     if(!slot_obj->is_used){
@@ -55,14 +99,14 @@ static void qos_add_for_ip(struct mbuf *m)
 {
     struct netutil_iphdr *iphdr = (struct netutil_iphdr *)(m->data + m->offset);
 
-    qos_put(m,iphdr->src_addr[3],iphdr->dst_addr[1],iphdr->dst_addr[2],iphdr->dst_addr[3]);
+    qos_put(m,iphdr,0);
 }
 
 static void qos_add_for_ipv6(struct mbuf *m)
 {
     struct netutil_ip6hdr *header=(struct netutil_ip6hdr *)(m->data+m->offset);
 
-    qos_put(m,header->src_addr[15],header->dst_addr[13],header->dst_addr[14],header->dst_addr[15]);
+    qos_put(m,header,1);
 }
 
 int qos_init(void)

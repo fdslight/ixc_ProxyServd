@@ -13,7 +13,7 @@ struct qos_slot{
     int is_used;
 };
 
-#define QOS_SLOT_NUM 1024
+#define QOS_SLOT_NUM 32768
 
 struct qos{
     struct qos_slot *slot_objs[QOS_SLOT_NUM];
