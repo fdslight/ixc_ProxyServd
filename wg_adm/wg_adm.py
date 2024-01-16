@@ -14,8 +14,8 @@ def gen_key():
         publickey = f.read()
     f.close()
 
-    os.remove(privatekey)
-    os.remove(publickey)
+    os.remove("privatekey")
+    os.remove("publickey")
 
     return {
         "publickey": publickey,
