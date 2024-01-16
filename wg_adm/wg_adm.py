@@ -31,7 +31,7 @@ def gen_file(name, interface, peer, pubkey, priv_key):
         s = f.read()
     f.close()
 
-    s.replace("${PrivateKey}", priv_key)
+    s=s.replace("${PrivateKey}", priv_key)
 
     fdst = open("%s/%s.conf" % (name, name,), "w")
     fdst.write(s)
@@ -41,7 +41,7 @@ def gen_file(name, interface, peer, pubkey, priv_key):
         s = f.read()
     f.close()
 
-    s.replace("${PublicKey}", pubkey)
+    s=s.replace("${PublicKey}", pubkey)
     fdst = open("%s/peer.conf" % name, "w")
     fdst.write(s)
     fdst.close()
