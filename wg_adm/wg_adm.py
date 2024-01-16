@@ -17,6 +17,12 @@ def gen_key():
     os.remove("privatekey")
     os.remove("publickey")
 
+    publickey = publickey.replace("\n", "")
+    publickey = publickey.replace("\r", "")
+
+    privatekey = privatekey.replace("\n", "")
+    privatekey = privatekey.replace("\r", "")
+
     return {
         "publickey": publickey,
         "privatekey": privatekey,
@@ -31,7 +37,7 @@ def gen_file(name, interface, peer, pubkey, priv_key):
         s = f.read()
     f.close()
 
-    s=s.replace("${PrivateKey}", priv_key)
+    s = s.replace("${PrivateKey}", priv_key)
 
     fdst = open("%s/%s.conf" % (name, name,), "w")
     fdst.write(s)
@@ -41,7 +47,7 @@ def gen_file(name, interface, peer, pubkey, priv_key):
         s = f.read()
     f.close()
 
-    s=s.replace("${PublicKey}", pubkey)
+    s = s.replace("${PublicKey}", pubkey)
     fdst = open("%s/peer.conf" % name, "w")
     fdst.write(s)
     fdst.close()
