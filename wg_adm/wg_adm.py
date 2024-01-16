@@ -51,7 +51,9 @@ def main():
     helper = """
     name --interface=local_template_file --peer=peer_template_file
     """
-    if len(sys.argv) < 3: return
+    if len(sys.argv) < 3:
+        print(helper)
+        return
 
     name = sys.argv[1]
 
