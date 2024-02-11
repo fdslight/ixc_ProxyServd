@@ -30,7 +30,11 @@ class client(udp_handler.udp_handler):
         self.__is_ipv6 = is_ipv6
 
         self.set_socket(s)
-        self.bind(bind_addr)
+        # 可能出现操作系统端口被用尽的情况
+        try:
+            self.bind(bind_addr)
+        except OSError:
+            return -1
 
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
