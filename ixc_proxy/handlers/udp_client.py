@@ -34,6 +34,7 @@ class client(udp_handler.udp_handler):
         try:
             self.bind(bind_addr)
         except OSError:
+            self.close()
             return -1
 
         self.register(self.fileno)
