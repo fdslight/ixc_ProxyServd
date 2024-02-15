@@ -51,7 +51,7 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
-    if(header->dst_addr[0]=0xff){
+    if(header->dst_addr[0]==0xff){
         mbuf_put(m);
         return;
     }
