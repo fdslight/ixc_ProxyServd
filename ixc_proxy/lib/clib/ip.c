@@ -27,6 +27,7 @@ void ip_handle(struct mbuf *m)
     int tot_len=ntohs(header->tot_len);
     int hdr_len=0;
     unsigned char ip_unspec[]={0x00,0x00,0x00,0x00};
+    unsigned char ip_broadcast[]={0xff,0xff,0xff,0xff};
 
     if(!ipalloc_isset_ip(0)){
         mbuf_put(m);
@@ -65,7 +66,7 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
-    if(header->dst_addr[0]==127 || header->dst_addr[0]==255){
+    if(header->dst_addr[0]==127){
         mbuf_put(m);
         return;
     }
@@ -77,6 +78,12 @@ void ip_handle(struct mbuf *m)
 
     // 源地址和目的地址不能一样
     if(!memcmp(header->src_addr,header->dst_addr,4)){
+        mbuf_put(m);
+        return;
+    }
+
+    // 广播地址丢弃
+    if(!memcmp(header->dst_addr,ip_broadcast,4)){
         mbuf_put(m);
         return;
     }

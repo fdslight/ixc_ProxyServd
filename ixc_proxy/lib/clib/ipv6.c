@@ -51,6 +51,11 @@ void ipv6_handle(struct mbuf *m)
         return;
     }
 
+    if(header->dst_addr[0]=0xff){
+        mbuf_put(m);
+        return;
+    }
+
     // 源地址和目标地址不能一样
     if(!memcmp(header->src_addr,header->dst_addr,16)){
         mbuf_put(m);
