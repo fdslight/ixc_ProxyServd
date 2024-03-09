@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 import socket, time, hashlib, zlib
 
 import pywind.evtframework.handlers.udp_handler as udp_handler
@@ -8,6 +9,7 @@ import pywind.web.lib.websocket as wslib
 
 import ixc_proxy.lib.base_proto.utils as proto_utils
 import ixc_proxy.lib.logging as logging
+import ixc_proxy.lib.base_proto.tunnel_tcp as tunnel_tcp
 
 
 class tcp_tunnel(tcp_handler.tcp_handler):
@@ -71,6 +73,8 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     __http_handshake_ok = None
     __http_auth_id = None
     __http_ws_key = None
+    # 受否在请求头部设置了session id
+    __isset_http_session_id = None
 
     # 是否开启zlib支持,根据客户端请求,如果客户端有发送zlib数据包,那么说明支持
     __enable_zlib = None
@@ -86,6 +90,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         self.__http_handshake_ok = False
         self.__over_http = over_http
         self.__http_auth_id = http_configs["auth_id"]
+        self.__isset_http_session_id = False
 
         self.__enable_zlib = False
 
@@ -123,7 +128,12 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
             while 1:
                 pkt_info = self.__decrypt.get_pkt()
                 if not pkt_info: break
-                session_id, action, message = pkt_info
+
+                if self.__isset_http_session_id:
+                    action, message = pkt_info
+                    session_id = self.__session_id
+                else:
+                    session_id, action, message = pkt_info
 
                 if action not in proto_utils.ACTS: continue
 
@@ -152,7 +162,6 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                     else:
                         action = proto_utils.ACT_DNS
 
-                self.__update_time = time.time()
                 self.dispatcher.handle_msg_from_tunnel(self.fileno, session_id, self.__address, action, message)
             ''''''
         ''''''
@@ -196,7 +205,12 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                     message = new_msg
                 ''''''
             ''''''
-        sent_pkt = self.__encrypt.build_packet(session_id, action, message)
+        if self.__isset_http_session_id:
+            sent_pkt = self.__encrypt.build_packet(action, message)
+        else:
+            sent_pkt = self.__encrypt.build_packet(session_id, action, message)
+            
+        self.__update_time = time.time()
         self.writer.write(sent_pkt)
         self.add_evt_write(self.fileno)
         self.__encrypt.reset()
@@ -257,6 +271,31 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
             logging.print_general("http_websocket_key_not_found", self.__address)
             self.response_http_error("400 Bad Request")
             return
+
+        session_id = self.get_http_kv_value("x-user-session-id", kv_pairs)
+        if session_id:
+            try:
+                byte_session_id = base64.b16decode(session_id)
+            except:
+                logging.print_general("wrong web request header session id value %s" % session_id, self.__address)
+                self.response_http_error("400 Bad Request")
+                return
+            if len(byte_session_id) != 16:
+                logging.print_general("wrong web request header session id value length %s" % session_id,
+                                      self.__address)
+                self.response_http_error("400 Bad Request")
+                return
+
+            logging.print_general("use_http_ext_session_id", self.__address)
+
+            self.__session_id = byte_session_id
+            self.__isset_http_session_id = True
+
+            # 当session id出现在HTTP头部时,使用精简协议
+            self.__encrypt = tunnel_tcp.over_http_builder()
+            self.__decrypt = tunnel_tcp.over_http_parser()
+        else:
+            self.__isset_http_session_id = False
 
         self.__http_handshake_ok = True
         logging.print_general("http_handshake_ok", self.__address)
