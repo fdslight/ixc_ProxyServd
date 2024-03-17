@@ -357,6 +357,9 @@ class redirect_udp_client(udp_handler.udp_handler):
         except socket.gaierror:
             self.close()
             return -1
+        except OSError:
+            self.close()
+            return -1
 
         self.register(self.fileno)
         self.add_evt_read(self.fileno)
