@@ -112,7 +112,9 @@ key = "hello"
 builder = encrypt()
 builder.config({"key": key})
 
-packets = builder.build_packets(bytes(16), 2, b"hello,world")
+data=os.urandom(1500)
+print(data)
+packets = builder.build_packets(bytes(16), 2, data)
 
 parser = decrypt()
 parser.config({"key": "hello"})
