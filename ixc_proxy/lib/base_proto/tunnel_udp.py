@@ -172,7 +172,7 @@ class parser(object):
         self.__fixed_header_size = fixed_header_size
         self.__wait_fill_seq = []
         self.__data_area = {}
-        # 超过3秒的数据包丢弃
+        # 超过时间的数据包丢弃
         self.__packet_timeout = 5
 
     def __parse_raib(self, data_block, csum_block):
