@@ -13,7 +13,7 @@ import pywind.evtframework.evt_dispatcher as dispatcher
 import ixc_proxy.handlers.relay as relay
 import ixc_proxy.lib.cfg_check as cfg_check
 import ixc_proxy.lib.logging as logging
-import ixc_proxy.lib.udp_heartbeat_file as udp_heartbeat_file_utils
+import ixc_proxy.lib.address_file as address_file
 
 
 class service(dispatcher.dispatcher):
@@ -25,11 +25,14 @@ class service(dispatcher.dispatcher):
     __up_time = None
     __begin_time = None
 
+    __limit_source_address = None
+
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
-                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None):
+                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None, limit_source_address=None):
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
+        self.__limit_source_address = limit_source_address
         # 限制的流量大小单位为GB
         self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
         if is_udp:
@@ -56,6 +59,10 @@ class service(dispatcher.dispatcher):
         self.__listen_fd = self.create_handler(-1, handler, bind, redirect, listen_is_ipv6=is_ipv6,
                                                redirect_is_ipv6=force_ipv6, udp_heartbeat_address=udp_heartbeat_address,
                                                tcp_redirect_slave=tcp_redirect_slave)
+
+    @property
+    def limit_source_address(self):
+        return self.__limit_source_address
 
     def traffic_statistics(self, traffic_size):
         self.__cur_traffic_size += traffic_size
@@ -120,12 +127,14 @@ class service(dispatcher.dispatcher):
 
 def main():
     help_doc = """
-    --bind=address,port --redirect=host,port -p tcp | udp [--tcp-redirect-slave=host,port][-6] [--nofork]  [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
+    --bind=address,port --redirect=host,port -p tcp | udp [--tcp-redirect-slave=host,port][-6] [--nofork]  
+    [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
+    [--limit-source-address-file=FILE]
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
                                    ["nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
-                                    "udp-heartbeat-file=", "tcp-redirect-slave="])
+                                    "udp-heartbeat-file=", "tcp-redirect-slave=", "--limit-source-address-file="])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -150,6 +159,8 @@ def main():
     tcp_redirect_slave_s = None
     tcp_redirect_slave = None
 
+    limit_source_address_file = None
+
     for k, v in opts:
         if k == "-6": force_ipv6 = True
         if k == "--bind": bind_s = v
@@ -162,6 +173,20 @@ def main():
         if k == "--limit-month-traffic": limit_month_traffic = v
         if k == "--udp-heartbeat-file": udp_heartbeat_file = v
         if k == "--tcp-redirect-slave": tcp_redirect_slave_s = v
+        if k == "--limit-source-address-file": limit_source_address_file = v
+
+    if limit_source_address_file is not None:
+        if not os.path.isfile(limit_source_address_file):
+            print("ERROR:not found limit source address file %s" % limit_source_address_file)
+            return
+        is_ok, limit_source_address = address_file.parse_address_list_from_file(limit_source_address_file)
+        if not is_ok:
+            print("ERROR:wrong source address ")
+            for s in limit_source_address: print(s)
+            return
+        ''''''
+    else:
+        limit_source_address = []
 
     if not bind_s:
         print("please set bind address")
@@ -220,7 +245,7 @@ def main():
         if not os.path.isfile(udp_heartbeat_file):
             print("error,not found udp heartbeat file %s" % udp_heartbeat_file)
             return
-        is_ok, address_list = udp_heartbeat_file_utils.parse_from_file(udp_heartbeat_file, is_ipv6=is_ipv6)
+        is_ok, address_list = address_file.parse_udp_heartbeat_address_from_file(udp_heartbeat_file, is_ipv6=is_ipv6)
         if not is_ok:
             print("error IP address")
             for line in address_list:
@@ -269,7 +294,7 @@ def main():
     try:
         instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
                         nofork=nofork, udp_heartbeat_address=udp_heartbeat_address,
-                        tcp_redirect_slave=tcp_redirect_slave)
+                        tcp_redirect_slave=tcp_redirect_slave, limit_source_address=limit_source_address)
     except KeyboardInterrupt:
         instance.release()
     except:

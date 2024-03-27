@@ -45,6 +45,14 @@ class tcp_listener(tcp_handler.tcp_handler):
             except BlockingIOError:
                 break
 
+            # 如果有限制名单那么限制连接地址
+            limit_source_address = self.dispatcher.limit_source_address
+            if limit_source_address:
+                if caddr[0] not in limit_source_address:
+                    cs.close()
+                    continue
+                ''''''
+
             is_master = self.__cur_is_master
 
             if self.__redirect_slave_address:
@@ -278,6 +286,11 @@ class udp_listener(udp_handler.udp_handler):
         self.add_evt_write(self.fileno)
 
     def udp_readable(self, message, address):
+        # 如果有限制地址那么检查地址是否在允许范围内
+        limit_source_address = self.dispatcher.limit_source_address
+        if limit_source_address:
+            if address[0] not in limit_source_address: return
+            ''''''
         # 丢弃心跳包
         if message == b"\0": return
 
