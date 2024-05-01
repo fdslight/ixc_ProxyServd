@@ -498,6 +498,13 @@ class proxyd(dispatcher.dispatcher):
 
 
 def __start_service(debug):
+    if not os.path.isfile("/usr/sbin/iptables"):
+        print("ERROR:please install iptables")
+        return
+    if not os.path.isfile("/usr/sbin/ip6tables"):
+        print("ERROR:please install ip6tables")
+        return
+
     if not debug and os.path.isfile(PID_FILE):
         print("the proxy server process exists")
         return
