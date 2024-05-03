@@ -59,7 +59,6 @@ class dns_client(udp_handler.udp_handler):
             message[2:]
         ]
         del self.__map[wan_dns_id]
-        print(b"".join(_list))
         self.dispatcher.handle_dns_msg_from_server(_id, b"".join(_list))
 
     def udp_writable(self):
