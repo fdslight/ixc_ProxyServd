@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pywind.evtframework.handlers.udp_handler as udp_handler
 import socket, struct, time
+import ixc_proxy.lib.logging as logging
 
 
 class dns_client(udp_handler.udp_handler):
@@ -76,7 +77,9 @@ class dns_client(udp_handler.udp_handler):
                 flags = True
                 break
             continue
-        if not flags: return
+        if not flags:
+            logging.print_error("not have enough DNS ID")
+            return
         self.__map[wan_dns_id] = {"dns_id": lan_dns_id, "id": _id, "time": time.time()}
 
         _list = [
