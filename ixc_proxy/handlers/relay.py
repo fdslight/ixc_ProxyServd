@@ -89,6 +89,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __is_master = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_master=False):
+        cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
         self.__time = time.time()
         self.__traffic_size = 0
 
@@ -96,26 +98,31 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.__caddr = caddr
         self.__creator = creator_fd
         self.__is_master = is_master
-        self.register(self.fileno)
-        self.add_evt_read(self.fileno)
-        self.set_timeout(self.fileno, 10)
-        cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
+
         if self.__redirect_fd < 0:
             logging.print_error(
                 "cannot create redirect socket for redirect %s,%s" % (redirect_addr[0], redirect_addr[1],))
-            self.delete_handler(self.fileno)
+            self.close()
             return -1
+
+        # 转发客户端创建成功后再注册事件
+        self.register(self.fileno)
+        self.add_evt_read(self.fileno)
+        self.set_timeout(self.fileno, 10)
+
         logging.print_general("connected_from", (caddr[0], caddr[1],))
 
         return self.fileno
 
     def tcp_readable(self):
         self.__time = time.time()
+
         if not self.dispatcher.have_traffic():
             self.delete_handler(self.fileno)
             return
+
         self.__traffic_size += self.reader.size()
         self.dispatcher.traffic_statistics(self.reader.size())
         self.send_message_to_handler(self.fileno, self.__redirect_fd, self.reader.read())
@@ -209,6 +216,7 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
         if not self.is_conn_ok():
             self.ctl_handler(self.fileno, self.__creator, "conn_err")
             return
+        return
 
     def tcp_error(self):
         cmd = "conn_close"
