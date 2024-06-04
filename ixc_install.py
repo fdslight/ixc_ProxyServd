@@ -64,7 +64,7 @@ def main():
     if debug:
         cflags = " -I %s -DDEBUG -g -Wall" % python3_include
     else:
-        cflags = " -I %s -O3 -Wall" % python3_include
+        cflags = " -I %s -O3 -Wall -march=native" % python3_include
 
     build(cflags)
 
