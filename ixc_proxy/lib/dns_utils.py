@@ -75,10 +75,10 @@ def is_a_request(dnspkt: bytes):
     return is_a
 
 
-def build_dns_no_such_name_response(xid: int, host: str, is_ipv6=False):
-    """构建DNS no such name 响应
+def build_dns_no_such_af_response(xid: int, host: str, is_ipv6=False):
+    """构建DNS不存在地址族响应
     """
-    header_data = struct.pack(HEADER_FMT, xid, 0x8183, 0x0001, 0x0000, 0x0000, 0x0000)
+    header_data = struct.pack(HEADER_FMT, xid, 0x8185, 0x0001, 0x0000, 0x0000, 0x0000)
     if is_ipv6:
         qtype = 28
     else:

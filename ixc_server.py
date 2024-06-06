@@ -340,7 +340,7 @@ class proxyd(dispatcher.dispatcher):
         return router_address
 
     def send_dns_err_msg_to_tunnel(self, _id: bytes, dns_xid: int, host: str, is_ipv6=False):
-        drop_msg = dns_utils.build_dns_no_such_name_response(dns_xid, host, is_ipv6=is_ipv6)
+        drop_msg = dns_utils.build_dns_no_such_af_response(dns_xid, host, is_ipv6=is_ipv6)
         self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, drop_msg)
 
     def is_permitted_dns_request(self, _id: bytes, message: bytes):
