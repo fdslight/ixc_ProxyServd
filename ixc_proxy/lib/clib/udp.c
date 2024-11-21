@@ -97,8 +97,11 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
     p=is_udplite?136:17;
 
     if(is_udplite && csum_coverage<8){
-        STDERR("wrong udplite csum_coverage value\r\n");
-        return -1;
+        // UDPLite的CSUM范围只能是0以及大于等于8的数
+        if(csum_coverage < 8 && csum_coverage!=0){
+            STDERR("wrong udplite csum_coverage value\r\n");
+            return -1;
+        }
     }
 
     m=mbuf_get();
@@ -153,8 +156,15 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
 
     memcpy(m->data+m->offset+8,data,length);
 
-    if(is_udplite) csum=csum_calc((unsigned short *)(m->data+m->offset),csum_coverage);
-    else csum=csum_calc((unsigned short *)(m->data+offset),m->end-offset);
+    if(is_udplite) {
+        if(csum_coverage==0){
+           csum=csum_calc((unsigned short *)(m->data+offset),m->end-offset); 
+        }else{
+           csum=csum_calc((unsigned short *)(m->data+m->offset),csum_coverage);
+        }
+    }else{
+        csum=csum_calc((unsigned short *)(m->data+offset),m->end-offset);
+    }
     
     udphdr->checksum=csum;
     
