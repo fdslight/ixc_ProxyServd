@@ -158,7 +158,8 @@ int udp_send(unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsi
 
     if(is_udplite) {
         if(csum_coverage==0){
-           csum=csum_calc((unsigned short *)(m->data+offset),m->end-offset); 
+            // 如果为0那么计算整个数据包的校验和
+           csum=csum_calc((unsigned short *)(m->data+offset),m->end-m->offset); 
         }else{
            csum=csum_calc((unsigned short *)(m->data+m->offset),csum_coverage);
         }
