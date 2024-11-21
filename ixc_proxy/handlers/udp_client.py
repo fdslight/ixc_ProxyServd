@@ -10,13 +10,17 @@ class client(udp_handler.udp_handler):
     __user_id = None
 
     __is_ipv6 = None
+    __is_udplite = False
 
-    def init_func(self, creator_fd, user_id: bytes, address: tuple, is_ipv6=False):
+    def init_func(self, creator_fd, user_id: bytes, address: tuple, is_ipv6=False, is_udplite=False):
         if is_ipv6:
             fa = socket.AF_INET6
         else:
             fa = socket.AF_INET
-        s = socket.socket(fa, socket.SOCK_DGRAM)
+        if is_udplite:
+            s = socket.socket(fa, socket.SOCK_DGRAM)
+        else:
+            s = socket.socket(fa, socket.SOCK_DGRAM, socket.IPPROTO_UDPLITE)
 
         if is_ipv6:
             s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
@@ -28,6 +32,7 @@ class client(udp_handler.udp_handler):
         self.__up_time = time.time()
         self.__user_id = user_id
         self.__is_ipv6 = is_ipv6
+        self.__is_udplite = is_udplite
 
         self.set_socket(s)
         # 可能出现操作系统端口被用尽的情况
@@ -46,7 +51,7 @@ class client(udp_handler.udp_handler):
     def udp_readable(self, message, address):
         _id = address[0]
         self.dispatcher.send_udp_msg_to_tunnel(self.__user_id, address, self.__my_address, message,
-                                               is_ipv6=self.__is_ipv6)
+                                               is_ipv6=self.__is_ipv6, is_udplite=self.__is_udplite)
 
     def udp_writable(self):
         self.remove_evt_write(self.fileno)

@@ -97,14 +97,14 @@ class proxyd(dispatcher.dispatcher):
                     is_ipv6: bool,
                     byte_data: bytes):
         # 禁用UDPLite支持
-        if is_udplite:
-            return
+        # if is_udplite:
+        #    return
         if not self.__access.session_exists(_id): return
         fd = self.__access.udp_get(_id, (src_addr, sport,))
         if fd > 0:
             self.get_handler(fd).send_msg(byte_data, (dst_addr, dport,))
             return
-        fd = self.create_handler(-1, udp_client.client, _id, (src_addr, sport,), is_ipv6=is_ipv6)
+        fd = self.create_handler(-1, udp_client.client, _id, (src_addr, sport,), is_ipv6=is_ipv6, is_udplite=is_udplite)
         if fd < 0:
             logging.print_error("cannot create udp client")
             return
@@ -419,7 +419,8 @@ class proxyd(dispatcher.dispatcher):
     def handle_dns_msg_from_server(self, _id: bytes, message: bytes):
         self.send_msg_to_tunnel(_id, proto_utils.ACT_DNS, message)
 
-    def send_udp_msg_to_tunnel(self, user_id: bytes, saddr: tuple, daddr: tuple, message: bytes, is_ipv6=False):
+    def send_udp_msg_to_tunnel(self, user_id: bytes, saddr: tuple, daddr: tuple, message: bytes, is_ipv6=False,
+                               is_udplite=False):
         if not self.__access.session_exists(user_id): return
         if is_ipv6:
             byte_saddr = socket.inet_pton(socket.AF_INET6, saddr[0])
@@ -427,7 +428,11 @@ class proxyd(dispatcher.dispatcher):
         else:
             byte_saddr = socket.inet_pton(socket.AF_INET, saddr[0])
             byte_daddr = socket.inet_pton(socket.AF_INET, daddr[0])
-        self.proxy.udp_send(byte_saddr, byte_daddr, saddr[1], daddr[1], False, is_ipv6, 0, message)
+        if is_udplite:
+            csum_coverage = 8
+        else:
+            csum_coverage = 0
+        self.proxy.udp_send(byte_saddr, byte_daddr, saddr[1], daddr[1], False, is_ipv6, csum_coverage, message)
 
     def udp_del(self, user_id: bytes, address: tuple):
         if not self.__access.session_exists(user_id): return
