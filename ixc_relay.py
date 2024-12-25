@@ -225,7 +225,7 @@ def main():
         print("wrong bind address format")
         return
 
-    if bind[1] > 0xffff - 1 or bind[1] < 1:
+    if bind[1] > 0xffff - 1 or bind[1] < 0:
         print("wrong bind port number")
         return
 
