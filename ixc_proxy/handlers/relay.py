@@ -167,7 +167,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             return
 
         if cmd == "conn_close":
-            self.delete_this_no_sent_data(self.fileno)
+            self.delete_this_no_sent_data()
             return
         ''''''
 
