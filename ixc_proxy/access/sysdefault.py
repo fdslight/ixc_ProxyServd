@@ -44,4 +44,5 @@ class access(_access.access):
         pass
 
     def handle_user_change_signal(self):
+        self.__users = {}
         self.load_configs()
