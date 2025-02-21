@@ -222,6 +222,9 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
         cmd = "conn_close"
         if not self.is_conn_ok():
             cmd = "conn_err"
+        else:
+            rdata = self.reader.read()
+            if rdata:self.send_message_to_handler(self.fileno,self.__creator,rdata)
         self.ctl_handler(self.fileno, self.__creator, cmd)
 
     def tcp_delete(self):
