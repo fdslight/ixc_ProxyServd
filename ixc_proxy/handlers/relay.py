@@ -163,7 +163,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
-            self.delete_this_no_sent_data()
+            self.delete_handler(self.fileno)
             return
 
         if cmd == "conn_close":
