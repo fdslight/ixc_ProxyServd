@@ -224,7 +224,7 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
             cmd = "conn_err"
         else:
             rdata = self.reader.read()
-            if rdata:self.send_message_to_handler(self.fileno,self.__creator,rdata)
+            if rdata: self.send_message_to_handler(self.fileno, self.__creator, rdata)
         self.ctl_handler(self.fileno, self.__creator, cmd)
 
     def tcp_delete(self):
@@ -410,8 +410,10 @@ class redirect_udp_client(udp_handler.udp_handler):
     def udp_timeout(self):
         t = time.time()
 
-        if t - self.__time > TIMEOUT:
+        if t - self.__time >= TIMEOUT:
             self.handler_ctl(self.__creator, "conn_err")
+        else:
+            self.set_timeout(self.fileno, 10)
         return
 
     def message_from_handler(self, from_fd, data):
