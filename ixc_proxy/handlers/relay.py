@@ -103,6 +103,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __is_master = None
     # 连接开始时间
     __conn_btime = None
+    __is_tell_master_ok = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_master=False):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -115,6 +116,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.__caddr = caddr
         self.__creator = creator_fd
         self.__is_master = is_master
+        self.__is_tell_master_ok = False
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
 
@@ -181,12 +183,21 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             self.delete_handler(self.fileno)
             return
 
-        # 如果不是master节点但连接超过30秒同时master节点状态正常那么自动切换回master节点
-        if t - self.__conn_btime >= 30 and not self.__is_master:
-            if self.get_handler(self.__creator).master_ok():
-                logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
-                self.delete_this_no_sent_data()
-                return
+        if t - self.__conn_btime > 30:
+            # 如果不是master节点但连接超过30秒同时master节点状态正常那么强制切换回master节点
+            if not self.__is_master:
+                if self.get_handler(self.__creator).master_ok():
+                    logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
+                    self.delete_this_no_sent_data()
+                    return
+                ''''''
+            else:
+                self.get_handler(self.__creator).tell_master_ok(False)
+                if not self.__is_tell_master_ok:
+                    # 避免日志重复打印
+                    self.__is_tell_master_ok = True
+                    logging.print_general("master work ok:from", (self.__caddr[0], self.__caddr[1],))
+                ''''''
             ''''''
         self.set_timeout(self.fileno, 10)
 
