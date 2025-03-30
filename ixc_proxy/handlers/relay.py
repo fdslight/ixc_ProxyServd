@@ -175,6 +175,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 class redirect_tcp_client(tcp_handler.tcp_handler):
     __creator = None
     __sent = None
+    __up_time = None
 
     def init_func(self, creator_fd, address, is_ipv6=False):
         self.__creator = creator_fd
