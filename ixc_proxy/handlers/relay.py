@@ -195,7 +195,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
                     return
                 ''''''
             else:
-                self.get_handler(self.__creator).tell_master_ok(False)
+                self.get_handler(self.__creator).tell_master_ok(True)
                 if not self.__is_tell_master_ok:
                     # 避免日志重复打印
                     self.__is_tell_master_ok = True
