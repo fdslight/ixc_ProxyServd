@@ -153,10 +153,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.delete_handler(self.fileno)
 
     def tcp_delete(self):
-        self.get_handler(self.__creator).tell_is_master(self.__is_master)
         # 检查连接时间
         t = self.__time - self.__conn_btime
-
         # 超过30s判断master连接正常,小于30秒判断master节点失败
         if t >= 30:
             if self.__is_master:
@@ -171,9 +169,14 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
         logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
                               (self.__caddr[0], self.__caddr[1],))
+
+        # 告知当前是否是master要在检测是否为master之后
+        self.get_handler(self.__creator).tell_is_master(self.__is_master)
+
         if self.__redirect_fd >= 0:
             self.delete_handler(self.__redirect_fd)
             self.__redirect_fd = -1
+
         self.unregister(self.fileno)
         self.close()
 
