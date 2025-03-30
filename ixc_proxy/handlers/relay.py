@@ -181,8 +181,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             self.delete_handler(self.fileno)
             return
 
-        # 如果不是master节点但连接超过300秒同时master节点状态正常那么自动切换回master节点
-        if t - self.__conn_btime >= 300 and not self.__is_master:
+        # 如果不是master节点但连接超过30秒同时master节点状态正常那么自动切换回master节点
+        if t - self.__conn_btime >= 30 and not self.__is_master:
             if self.get_handler(self.__creator).master_ok():
                 logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
                 self.delete_this_no_sent_data()
