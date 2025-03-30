@@ -188,7 +188,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             if not self.__is_master:
                 if self.get_handler(self.__creator).master_ok():
                     logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
-                    self.delete_this_no_sent_data()
+                    self.delete_handler(self.fileno)
                     return
                 ''''''
             else:
