@@ -13,6 +13,7 @@ class tcp_listener(tcp_handler.tcp_handler):
     __redirect_address = None
     __redirect_slave_address = None
     __cur_is_master = None
+    __master_ok = False
 
     def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
                   tcp_redirect_slave=None, **kwargs):
@@ -29,6 +30,7 @@ class tcp_listener(tcp_handler.tcp_handler):
         self.__redirect_address = redirect_address
         self.__redirect_slave_address = tcp_redirect_slave
         self.__cur_is_master = True
+        self.__master_ok = True
 
         self.set_socket(s)
         self.bind(address)
@@ -72,11 +74,23 @@ class tcp_listener(tcp_handler.tcp_handler):
 
     def tell_is_master(self, is_master: bool):
         if self.__redirect_slave_address:
-            # 进行节点切换
-            self.__cur_is_master = not is_master
+            # 如果master是OK的,那么一直使用master
+            if self.__master_ok:
+                self.__cur_is_master = True
+            else:
+                # 如果不是那么master和slave切换,同时也自动探测master是否已经恢复
+                self.__cur_is_master = not is_master
+            ''''''
         else:
             # 如果没有设置从节点,那么始终True
             self.__cur_is_master = True
+        ''''''
+
+    def tell_master_ok(self, is_ok: bool):
+        self.__master_ok = is_ok
+
+    def master_ok(self):
+        return self.__master_ok
 
 
 class redirect_tcp_handler(tcp_handler.tcp_handler):
@@ -87,11 +101,14 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __traffic_size = None
     __creator = None
     __is_master = None
+    # 连接开始时间
+    __conn_btime = None
 
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_master=False):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         self.__time = time.time()
+        self.__conn_btime = self.__time
         self.__traffic_size = 0
 
         self.set_socket(cs)
@@ -135,6 +152,18 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     def tcp_delete(self):
         self.get_handler(self.__creator).tell_is_master(self.__is_master)
+        # 检查连接时间
+        t = self.__time - self.__conn_btime
+
+        # 超过30s判断master连接正常,小于30秒判断master节点失败
+        if t >= 30:
+            if self.__is_master:
+                self.get_handler(self.__creator).tell_master_ok(True)
+            ''''''
+        else:
+            if self.__is_master:
+                self.get_handler(self.__creator).tell_master_ok(False)
+            ''''''
 
         logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
                               (self.__caddr[0], self.__caddr[1],))
@@ -149,6 +178,14 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         if t - self.__time > TIMEOUT:
             self.delete_handler(self.fileno)
             return
+
+        # 如果不是master节点但连接超过300秒同时master节点状态正常那么自动切换回master节点
+        if t - self.__conn_btime >= 300 and not self.__is_master:
+            if self.get_handler(self.__creator).master_ok():
+                logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
+                self.delete_this_no_sent_data()
+                return
+            ''''''
         self.set_timeout(self.fileno, 10)
 
     def message_from_handler(self, from_fd, byte_data):
@@ -168,6 +205,10 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
         if cmd == "conn_close":
             self.delete_this_no_sent_data()
+            return
+
+        if cmd == "tell_master_ok":
+            self.get_handler(self.__creator).tell_master_ok(args[0])
             return
         ''''''
 
@@ -225,6 +266,7 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
         else:
             rdata = self.reader.read()
             if rdata: self.send_message_to_handler(self.fileno, self.__creator, rdata)
+
         self.ctl_handler(self.fileno, self.__creator, cmd)
 
     def tcp_delete(self):
