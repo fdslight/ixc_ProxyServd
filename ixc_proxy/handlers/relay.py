@@ -159,10 +159,12 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         if t >= 30:
             if self.__is_master:
                 self.get_handler(self.__creator).tell_master_ok(True)
+                logging.print_general("master work ok:from", (self.__caddr[0], self.__caddr[1],))
             ''''''
         else:
             if self.__is_master:
                 self.get_handler(self.__creator).tell_master_ok(False)
+                logging.print_general("master not work:from", (self.__caddr[0], self.__caddr[1],))
             ''''''
 
         logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
