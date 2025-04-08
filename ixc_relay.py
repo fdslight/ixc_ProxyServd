@@ -292,7 +292,7 @@ def main():
 
     instance = service()
     try:
-        instance.ioloop(bind, redirect, is_udp=is_udp, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
+        instance.ioloop(bind, redirect, is_udp=is_udp,is_ipv6=is_ipv6, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
                         nofork=nofork, udp_heartbeat_address=udp_heartbeat_address,
                         tcp_redirect_slave=tcp_redirect_slave, limit_source_address=limit_source_address)
     except KeyboardInterrupt:
