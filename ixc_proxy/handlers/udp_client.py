@@ -18,9 +18,9 @@ class client(udp_handler.udp_handler):
         else:
             fa = socket.AF_INET
         if is_udplite:
-            s = socket.socket(fa, socket.SOCK_DGRAM)
+            s = socket.socket(fa, socket.SOCK_DGRAM,socket.IPPROTO_UDPLITE)
         else:
-            s = socket.socket(fa, socket.SOCK_DGRAM, socket.IPPROTO_UDPLITE)
+            s = socket.socket(fa, socket.SOCK_DGRAM)
 
         if is_ipv6:
             s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
