@@ -54,6 +54,7 @@ class client(udp_handler.udp_handler):
                                                is_ipv6=self.__is_ipv6, is_udplite=self.__is_udplite)
 
     def udp_writable(self):
+        print("ZZZZZZZZZZZZZZZZZZZZ")
         self.remove_evt_write(self.fileno)
 
     def udp_timeout(self):
@@ -74,7 +75,6 @@ class client(udp_handler.udp_handler):
 
     def send_msg(self, message: bytes, address: tuple):
         self.__up_time = time.time()
-        print(message,address)
         self.sendto(message, address)
         self.add_evt_write(self.fileno)
 
