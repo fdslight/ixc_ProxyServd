@@ -21,7 +21,7 @@ class client(udp_handler.udp_handler):
             s = socket.socket(fa, socket.SOCK_DGRAM)
         else:
             s = socket.socket(fa, socket.SOCK_DGRAM, socket.IPPROTO_UDPLITE)
-
+        print(is_udplite)
         if is_ipv6:
             s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
             bind_addr = ("::", 0, 0, 0)
