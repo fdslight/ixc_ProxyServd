@@ -102,14 +102,14 @@ class proxyd(dispatcher.dispatcher):
         if not self.__access.session_exists(_id): return
         fd = self.__access.udp_get(_id, (src_addr, sport,))
         if fd > 0:
-            print(dport)
+            print(byte_data,dst_addr,dport)
             self.get_handler(fd).send_msg(byte_data, (dst_addr, dport,))
             return
         fd = self.create_handler(-1, udp_client.client, _id, (src_addr, sport,), is_ipv6=is_ipv6, is_udplite=is_udplite)
         if fd < 0:
             logging.print_error("cannot create udp client")
             return
-        print(dport)
+        print(byte_data,dst_addr,dport)
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
