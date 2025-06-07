@@ -80,6 +80,7 @@ static void __udp_handle_v6(struct mbuf *m)
 
 void udp_handle(struct mbuf *m,int is_ipv6)
 {
+    DBG_FLAGS;
     if(is_ipv6) __udp_handle_v6(m);
     else __udp_handle_v4(m);
 }
