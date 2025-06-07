@@ -99,7 +99,9 @@ class proxyd(dispatcher.dispatcher):
         # 禁用UDPLite支持
         # if is_udplite:
         #    return
+        print("A")
         if not self.__access.session_exists(_id): return
+        print("B")
         fd = self.__access.udp_get(_id, (src_addr, sport,))
         if fd > 0:
             self.get_handler(fd).send_msg(byte_data, (dst_addr, dport,))
@@ -108,6 +110,7 @@ class proxyd(dispatcher.dispatcher):
         if fd < 0:
             logging.print_error("cannot create udp client")
             return
+        print("C")
         self.__access.udp_add(_id, (src_addr, sport,), fd)
         self.get_handler(fd).send_msg(byte_data, (dst_addr, dport))
 
