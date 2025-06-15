@@ -30,6 +30,7 @@ class tcp_tunnel(tcp_handler.tcp_handler):
             fa = socket.AF_INET
 
         s = socket.socket(fa, socket.SOCK_STREAM)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         if is_ipv6: s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -80,6 +81,8 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     __enable_zlib = None
 
     def init_func(self, creator, crypto, crypto_configs, cs, address, conn_timeout, over_http=False):
+        cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
         http_configs = self.dispatcher.http_configs
 
         self.__address = address
@@ -209,7 +212,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
             sent_pkt = self.__encrypt.build_packet(action, message)
         else:
             sent_pkt = self.__encrypt.build_packet(session_id, action, message)
-            
+
         self.__update_time = time.time()
         self.writer.write(sent_pkt)
         self.add_evt_write(self.fileno)
