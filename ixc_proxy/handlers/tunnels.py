@@ -217,6 +217,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         self.writer.write(sent_pkt)
         self.add_evt_write(self.fileno)
         self.__encrypt.reset()
+        self.send_now()
 
     def do_http_handshake(self):
         size = self.reader.size()

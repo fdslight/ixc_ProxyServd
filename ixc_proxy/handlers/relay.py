@@ -215,6 +215,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.dispatcher.traffic_statistics(size)
         self.writer.write(byte_data)
         self.add_evt_write(self.fileno)
+        self.send_now()
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
@@ -304,6 +305,7 @@ class redirect_tcp_client(tcp_handler.tcp_handler):
 
         self.add_evt_write(self.fileno)
         self.writer.write(byte_data)
+        self.send_now()
 
 
 class udp_listener(udp_handler.udp_handler):
