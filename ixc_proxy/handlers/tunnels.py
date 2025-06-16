@@ -425,6 +425,7 @@ class udp_tunnel(udp_handler.udp_handler):
         for ippkt in ippkts: self.sendto(ippkt, address)
 
         self.add_evt_write(self.fileno)
+        self.send_now()
 
     def is_tcp(self):
         return False

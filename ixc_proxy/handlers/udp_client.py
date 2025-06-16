@@ -76,6 +76,7 @@ class client(udp_handler.udp_handler):
         self.__up_time = time.time()
         self.sendto(message, address)
         self.add_evt_write(self.fileno)
+        self.send_now()
 
     def is_tcp(self):
         """考虑隧道fd被重复使用的情况
