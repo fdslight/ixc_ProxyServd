@@ -62,9 +62,9 @@ def main():
         return
 
     if debug:
-        cflags = " -I %s -DDEBUG -g -Wall" % python3_include
+        cflags = " -I %s -DDEBUG -g -Wall -Wextra -Wno-unused-parameter" % python3_include
     else:
-        cflags = " -I %s -O3 -Wall" % python3_include
+        cflags = " -I %s -O3 -Wall -g" % python3_include
 
     build(cflags)
 

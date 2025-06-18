@@ -97,7 +97,7 @@ int time_wheel_new(struct time_wheel *time_wheel,unsigned int tick_size,time_t e
     bzero(time_wheel->tick_idx,sizeof(NULL)*(tick_size+1));
    
     // 这里tick数目多一个是考虑临界情况
-    for(int n=0;n<=tick_size;n++){
+    for(unsigned int n=0;n<=tick_size;n++){
         tick=malloc(sizeof(struct time_tick));
         if(NULL==tick){
             time_wheel_release(time_wheel);
@@ -118,7 +118,7 @@ int time_wheel_new(struct time_wheel *time_wheel,unsigned int tick_size,time_t e
 
     last->next=time_wheel->cur_tick;
 
-    for(int n=0;n<pre_alloc_data_num;n++){
+    for(unsigned int n=0;n<pre_alloc_data_num;n++){
         tdata=malloc(sizeof(struct time_data));
         if(NULL==tdata){
             time_wheel_release(time_wheel);
@@ -146,7 +146,7 @@ void time_wheel_release(struct time_wheel *time_wheel)
     struct time_tick *tick=time_wheel->cur_tick,*t;
     struct time_data *tdata=NULL,*tmp;
 
-    for(int n=0;n<=time_wheel->tick_size;n++){
+    for(unsigned int n=0;n<=time_wheel->tick_size;n++){
         t=tick->next;
         time_wheel_timeout(time_wheel,tick->time_data);
         free(tick);
@@ -195,7 +195,7 @@ struct time_data *time_wheel_add(struct time_wheel *time_wheel,void *data,time_t
 
 void time_wheel_handle(struct time_wheel *time_wheel)
 {
-    unsigned int tick_n;
+    int tick_n;
     time_t now=time(NULL);
     time_t v=now-time_wheel->old_time;
     struct time_tick *tick=time_wheel->cur_tick,*old_tick;

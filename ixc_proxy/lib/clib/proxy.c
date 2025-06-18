@@ -431,7 +431,8 @@ static struct PyModuleDef proxy_module={
     "proxy",
     NULL,
     -1,
-    proxy_methods
+    proxy_methods,
+    NULL,NULL,NULL,NULL
 };
 
 PyMODINIT_FUNC

@@ -99,7 +99,7 @@ int map_pre_alloc(struct map *m,unsigned int size)
 	struct map_node *t;
 	int rs=0;
 	
-	for(int n=0;n<size;n++){
+	for(unsigned int n=0;n<size;n++){
 		t=malloc(sizeof(struct map_node));
 		if(NULL==t){
 			rs=-1;

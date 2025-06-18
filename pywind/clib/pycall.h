@@ -55,13 +55,13 @@ PyObject *py_func_call(PyObject *module,const char *func_name,PyObject **args,si
 
     pArgs=PyTuple_New(arg_size);
 
-    for(int n=0;n<arg_size;n++){
+    for(size_t n=0;n<arg_size;n++){
         PyTuple_SetItem(pArgs, n, args[n]);
     }
 
     pValue=PyObject_CallObject(pFunc,pArgs);
 
-    for(int n=0;n<arg_size;n++){
+    for(size_t n=0;n<arg_size;n++){
         Py_DECREF(args[n]);
     }
 
