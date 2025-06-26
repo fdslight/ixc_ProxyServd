@@ -157,8 +157,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     def tcp_delete(self):
         # 检查连接时间
         t = self.__time - self.__conn_btime
-        # 超过30s判断master连接正常,小于30秒判断master节点失败
-        if t >= 30:
+        # 超过300s判断master连接正常,小于30秒判断master节点失败
+        if t >= 300:
             if self.__is_master:
                 self.get_handler(self.__creator).tell_master_ok(True)
                 logging.print_general("master work ok:from", (self.__caddr[0], self.__caddr[1],))
