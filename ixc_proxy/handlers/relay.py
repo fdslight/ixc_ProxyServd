@@ -188,7 +188,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             self.delete_handler(self.fileno)
             return
 
-        if t - self.__conn_btime > 30:
+        if t - self.__conn_btime > 300:
             # 如果不是master节点但连接超过30秒同时master节点状态正常那么强制切换回master节点
             if not self.__is_master:
                 if self.get_handler(self.__creator).master_ok():
