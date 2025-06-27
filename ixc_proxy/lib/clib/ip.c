@@ -162,7 +162,7 @@ int ip_send(unsigned char *src_addr,unsigned char *dst_addr,unsigned char protoc
     unsigned char *ptr=data;
     struct mbuf *m=NULL;
     int tot_size=0,rs=0;
-    unsigned short df=0x4000,mf=0x0000,frag_off=0;
+    unsigned short df=0x0000,mf=0x0000,frag_off=0;
 
     srand(time(NULL));
 
