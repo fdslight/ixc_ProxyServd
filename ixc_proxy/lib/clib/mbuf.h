@@ -17,7 +17,7 @@ struct mbuf{
     int from;
     int is_ipv6;
     unsigned char id[16];
-#define MBUF_DATA_MAX_SIZE 0x101ff
+#define MBUF_DATA_MAX_SIZE 0x10800
     unsigned char data[MBUF_DATA_MAX_SIZE];
 };
 
