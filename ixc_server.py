@@ -301,12 +301,10 @@ class proxyd(dispatcher.dispatcher):
         eth_name = nat_config["eth_name"]
 
         if enable_ipv6:
-            self.__unconfig_gw(subnet, prefix, is_ipv6=True)
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
-        self.__unconfig_gw(subnet, prefix, is_ipv6=False)
         self.__config_gateway(subnet, prefix, eth_name)
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
@@ -523,6 +521,12 @@ class proxyd(dispatcher.dispatcher):
         if self.handler_exists(self.__tcp_fileno):
             self.delete_handler(self.__tcp_fileno)
 
+        nat= self.__configs["nat"]
+        subnet,prefix=netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
+        self.__unconfig_gw(subnet, prefix,is_ipv6=True)
+        subnet,prefix=netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
+        self.__unconfig_gw(subnet, prefix,is_ipv6=False)
+
         sys.exit(0)
 
     def __handle_change_signal(self, signum, frame):
@@ -575,7 +579,10 @@ def __stop_service():
         print("cannot found proxy server process")
         return
 
-    os.kill(pid, signal.SIGINT)
+    try:
+        os.kill(pid, signal.SIGINT)
+    except:
+        if os.path.isfile(PID_FILE): os.remove(PID_FILE)
 
 
 def __update_user_configs():
