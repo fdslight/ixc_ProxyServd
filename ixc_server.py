@@ -487,23 +487,26 @@ class proxyd(dispatcher.dispatcher):
         ''''''
 
     def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
-        line_numbers = []
-        if is_ipv6:
-            fdst = os.popen("ip6tables -L -n --line-number | grep %s/%s" % (subnet, prefix))
-        else:
-            fdst = os.popen("iptables -L -n --line-number | grep %s/%s" % (subnet, prefix))
-        for line in fdst:
-            line = line.replace("\n", "")
-            line = line.replace("\r", "")
-            _list = line.split(" ")
-            if len(_list) < 2: continue
-            try:
-                line_number = int(_list[0])
-            except ValueError:
-                continue
-            line_numbers.append(line_number)
-        fdst.close()
-        for i in line_numbers:
+        while 1:
+            line_numbers = []
+            if is_ipv6:
+                fdst = os.popen("ip6tables -L -n --line-number | grep %s/%s" % (subnet, prefix))
+            else:
+                fdst = os.popen("iptables -L -n --line-number | grep %s/%s" % (subnet, prefix))
+            for line in fdst:
+                line = line.replace("\n", "")
+                line = line.replace("\r", "")
+                _list = line.split(" ")
+                if len(_list) < 2: continue
+                try:
+                    line_number = int(_list[0])
+                except ValueError:
+                    continue
+                line_numbers.append(line_number)
+            fdst.close()
+            if not line_numbers:break
+            i=line_numbers[0]
+            # 每次只删除一条,因为删除后序号会发生变化
             if is_ipv6:
                 cmd = "ip6tables -D FORWARD %s" % i
             else:
