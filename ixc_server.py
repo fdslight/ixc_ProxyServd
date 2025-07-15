@@ -301,10 +301,12 @@ class proxyd(dispatcher.dispatcher):
         eth_name = nat_config["eth_name"]
 
         if enable_ipv6:
+            self.__unconfig_gw(subnet, prefix, is_ipv6=True)
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
+        self.__unconfig_gw(subnet, prefix, is_ipv6=False)
         self.__config_gateway(subnet, prefix, eth_name)
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
@@ -484,6 +486,32 @@ class proxyd(dispatcher.dispatcher):
         router_address2 = self.read_os_default_v6_router()
         if not router_address2:
             if router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
+        ''''''
+
+    def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
+        line_numbers = []
+        if is_ipv6:
+            fdst = os.popen("ip6tables -L -n --line-number | grep %s/%s" % (subnet, prefix))
+        else:
+            fdst = os.popen("iptables -L -n --line-number | grep %s/%s" % (subnet, prefix))
+        for line in fdst:
+            line = line.replace("\n", "")
+            line = line.replace("\r", "")
+            _list = line.split(" ")
+            if len(_list) < 2: continue
+            try:
+                line_number = int(_list[0])
+            except ValueError:
+                continue
+            line_numbers.append(line_number)
+        fdst.close()
+        for i in line_numbers:
+            if is_ipv6:
+                cmd = ""
+            else:
+                cmd = "iptables -D FORWARD %s" % i
+            os.system(cmd)
+        return
 
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns6_fileno):
