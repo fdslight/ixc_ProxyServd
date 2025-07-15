@@ -507,7 +507,7 @@ class proxyd(dispatcher.dispatcher):
         fdst.close()
         for i in line_numbers:
             if is_ipv6:
-                cmd = ""
+                cmd = "ip6tables -D FORWARD %s" % i
             else:
                 cmd = "iptables -D FORWARD %s" % i
             os.system(cmd)
