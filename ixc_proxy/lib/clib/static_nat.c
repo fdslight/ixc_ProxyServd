@@ -115,6 +115,34 @@ static void static_nat_modify_ip_tcp_mss(struct netutil_iphdr *header)
     static_nat_tcp_mss_modify(tcp_header,0);
 }
 
+static void static_nat_for_icmp(struct mbuf *m,struct netutil_iphdr *iphdr,unsigned char *new_addr,int is_src)
+{
+    int hdr_len=(iphdr->ver_and_ihl & 0x0f) * 4;
+    int need_handle_flags;
+    struct netutil_icmphdr *icmphdr=(struct netutil_icmphdr *)(m->data+m->offset+hdr_len);
+
+    switch(icmphdr->type){
+        case 3:
+        case 4:
+        case 11:
+        case 12:
+            need_handle_flags=1;
+            break;
+        default:
+            need_handle_flags=0;
+            break;
+    }
+
+    if(!need_handle_flags) return;
+    iphdr=(struct netutil_iphdr *)(m->data+m->offset+hdr_len+8);
+    // 这里因为是原始数据包,所以方向需要反过来
+    if(is_src){
+        rewrite_ip_addr(iphdr,new_addr,0);
+    }else{
+        rewrite_ip_addr(iphdr,new_addr,1);
+    }
+}
+
 
 static void static_nat_handle_v4(struct mbuf *m)
 {
@@ -147,6 +175,9 @@ static void static_nat_handle_v4(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN){
         memcpy(m->id,r->id,16);
         rewrite_ip_addr(header,r->lan_addr1,is_src);
+        if(1==header->protocol){
+            static_nat_for_icmp(m,header,r->lan_addr1,is_src);
+        }
         static_nat_send_next_for_v4(m,header);
         return;
     }
@@ -154,6 +185,9 @@ static void static_nat_handle_v4(struct mbuf *m)
     if(r){
         r->up_time=time(NULL);
         rewrite_ip_addr(header,r->lan_addr2,is_src);
+        if(1==header->protocol){
+            static_nat_for_icmp(m,header,r->lan_addr2,is_src);
+        }
         static_nat_send_next_for_v4(m,header);
         return;
     }
