@@ -233,6 +233,36 @@ static void static_nat_modify_ip6_tcp_mss(struct netutil_ip6hdr *header)
     static_nat_tcp_mss_modify(tcp_header,1);
 }
 
+static void static_nat_rewrite_for_icmpv6(struct mbuf *m,unsigned char *new_addr,int is_src)
+{
+    struct netutil_icmpv6hdr *icmpv6hdr=(struct netutil_icmpv6hdr *)(m->data+m->offset+40);
+    struct netutil_ip6hdr *header=NULL;
+    unsigned char *ptr=m->data+m->offset+48;
+    int need_handle_flags=0;
+
+    switch(icmpv6hdr->type){
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            need_handle_flags=1;
+            break;
+        default:
+            need_handle_flags=0;
+            break;
+    }
+    // 只处理错误消息
+    if(!need_handle_flags) return;
+    // 重写错误消息内部的IPv6数据包
+    header=(struct netutil_ip6hdr *)ptr;
+
+    // 这里IPv6内部原始数据包需要反过来,因为是发送流量或者接收流量的复制
+    if(is_src){
+        rewrite_ip6_addr(header,new_addr,0);
+    }else{
+        rewrite_ip6_addr(header,new_addr,1);
+    }
+}
 
 static void static_nat_handle_v6(struct mbuf *m)
 {
@@ -270,6 +300,9 @@ static void static_nat_handle_v6(struct mbuf *m)
         memcpy(m->id,r->id,16);
         DBG_FLAGS;
         rewrite_ip6_addr(header,r->lan_addr1,is_src);
+        if(58==header->next_header){
+            static_nat_rewrite_for_icmpv6(m,r->lan_addr1,is_src);
+        }
         DBG_FLAGS;
         static_nat_send_next_for_v6(m,header);
         return;
@@ -279,6 +312,11 @@ static void static_nat_handle_v6(struct mbuf *m)
         DBG_FLAGS;
         r->up_time=time(NULL);
         rewrite_ip6_addr(header,r->lan_addr2,is_src);
+
+        if(58==header->next_header){
+            static_nat_rewrite_for_icmpv6(m,r->lan_addr2,is_src);
+        }
+
         static_nat_send_next_for_v6(m,header);
         return;
     }
