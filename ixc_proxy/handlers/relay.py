@@ -173,7 +173,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
                 logging.print_general("master not work:from", (self.__caddr[0], self.__caddr[1],))
             ''''''
 
-        logging.print_general("conn keep %s seconds,and traffic size is %s from" % (t, str(self.__traffic_size),),
+        logging.print_general("conn keep %s seconds,and traffic size is %s from" % (int(t), str(self.__traffic_size),),
                               (self.__caddr[0], self.__caddr[1],))
 
         # 告知当前是否是master要在检测是否为master之后
