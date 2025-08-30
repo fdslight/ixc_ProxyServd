@@ -107,6 +107,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     __conn_btime = None
     __is_tell_master_ok = None
 
+    __redirect_conn_ok = None
+
     def init_func(self, creator_fd, cs, caddr, redirect_addr, is_ipv6=False, is_master=False):
         cs.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
@@ -119,6 +121,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.__creator = creator_fd
         self.__is_master = is_master
         self.__is_tell_master_ok = False
+        self.__redirect_conn_ok = True
 
         self.__redirect_fd = self.create_handler(self.fileno, redirect_tcp_client, redirect_addr, is_ipv6=is_ipv6)
 
@@ -157,19 +160,20 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
     def tcp_delete(self):
         # 检查连接时间
         t = self.__time - self.__conn_btime
-        # 超过300s判断master连接正常,小于30秒判断master节点失败
-        if t >= 300:
+        # 超过60判断master连接正常,小于60秒判断master节点失败
+        if t >= 60:
             if self.__is_master:
                 self.get_handler(self.__creator).tell_master_ok(True)
                 logging.print_general("master work ok:from", (self.__caddr[0], self.__caddr[1],))
             ''''''
         else:
-            if self.__is_master:
+            # 这里需要判断master是否能够正常连接,避免有些非法连接连一下断开导致切换节点
+            if self.__is_master and not self.__redirect_conn_ok:
                 self.get_handler(self.__creator).tell_master_ok(False)
                 logging.print_general("master not work:from", (self.__caddr[0], self.__caddr[1],))
             ''''''
 
-        logging.print_general("disconnect traffic_size:%s from" % str(self.__traffic_size),
+        logging.print_general("conn keep %s seconds,and traffic size is %s from" % (t, str(self.__traffic_size),),
                               (self.__caddr[0], self.__caddr[1],))
 
         # 告知当前是否是master要在检测是否为master之后
@@ -189,7 +193,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
             return
 
         if t - self.__conn_btime > 300:
-            # 如果不是master节点但连接超过30秒同时master节点状态正常那么强制切换回master节点
+            # 如果不是master节点但连接超过300秒同时master节点状态正常那么强制切换回master节点
             if not self.__is_master:
                 if self.get_handler(self.__creator).master_ok():
                     logging.print_general("change to master node:from", (self.__caddr[0], self.__caddr[1],))
@@ -219,10 +223,12 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
     def handler_ctl(self, from_fd, cmd, *args, **kwargs):
         if cmd == "conn_err":
+            self.__redirect_conn_ok = False
             self.delete_handler(self.fileno)
             return
 
         if cmd == "conn_close":
+            self.__redirect_conn_ok = True
             self.delete_this_no_sent_data()
             return
 
