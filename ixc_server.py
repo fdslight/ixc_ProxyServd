@@ -327,6 +327,10 @@ class proxyd(dispatcher.dispatcher):
     def proxy(self):
         return self.__proxy
 
+    @property
+    def access(self):
+        return self.__access
+
     def read_os_default_v6_router(self):
         """获取操作系统默认IPv6路由
         """
@@ -504,8 +508,8 @@ class proxyd(dispatcher.dispatcher):
                     continue
                 line_numbers.append(line_number)
             fdst.close()
-            if not line_numbers:break
-            i=line_numbers[0]
+            if not line_numbers: break
+            i = line_numbers[0]
             # 每次只删除一条,因为删除后序号会发生变化
             if is_ipv6:
                 cmd = "ip6tables -D FORWARD %s" % i
@@ -524,11 +528,11 @@ class proxyd(dispatcher.dispatcher):
         if self.handler_exists(self.__tcp_fileno):
             self.delete_handler(self.__tcp_fileno)
 
-        nat= self.__configs["nat"]
-        subnet,prefix=netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
-        self.__unconfig_gw(subnet, prefix,is_ipv6=True)
-        subnet,prefix=netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
-        self.__unconfig_gw(subnet, prefix,is_ipv6=False)
+        nat = self.__configs["nat"]
+        subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
+        self.__unconfig_gw(subnet, prefix, is_ipv6=True)
+        subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
+        self.__unconfig_gw(subnet, prefix, is_ipv6=False)
 
         sys.exit(0)
 
