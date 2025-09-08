@@ -148,7 +148,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                     self.delete_handler(self.fileno)
                     return
 
-                if not self.access.session_exists(session_id):
+                if not self.access.user_exists(session_id):
                     self.delete_handler(self.fileno)
                     return
 
@@ -298,7 +298,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 self.response_http_error("400 Bad Request")
                 return
 
-            if not self.access.session_exists(session_id):
+            if not self.access.user_exists(session_id):
                 self.response_http_error("403 Forbidden")
                 return
 
