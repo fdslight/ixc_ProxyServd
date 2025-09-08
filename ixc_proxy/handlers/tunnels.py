@@ -298,7 +298,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 self.response_http_error("400 Bad Request")
                 return
 
-            if not self.access.user_exists(session_id):
+            if not self.access.user_exists(byte_session_id):
                 self.response_http_error("403 Forbidden")
                 return
 
