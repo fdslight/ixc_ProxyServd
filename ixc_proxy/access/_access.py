@@ -148,3 +148,8 @@ class access(object):
         info = self.__sessions[session_id][3]
 
         return info.get(_id, -1)
+
+    def user_exists(self, user_id: bytes):
+        """检查用户是否存在,重写这个方法
+        """
+        return False

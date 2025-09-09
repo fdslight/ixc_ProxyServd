@@ -74,7 +74,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
     __http_handshake_ok = None
     __http_auth_id = None
     __http_ws_key = None
-    # 受否在请求头部设置了session id
+    # 是否在请求头部设置了session id
     __isset_http_session_id = None
 
     # 是否开启zlib支持,根据客户端请求,如果客户端有发送zlib数据包,那么说明支持
@@ -114,6 +114,10 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
 
         return self.fileno
 
+    @property
+    def access(self):
+        return self.dispatcher.access
+
     def tcp_readable(self):
         if self.__over_http and not self.__http_handshake_ok:
             self.do_http_handshake()
@@ -141,6 +145,10 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 if action not in proto_utils.ACTS: continue
 
                 if self.__session_id and self.__session_id != session_id:
+                    self.delete_handler(self.fileno)
+                    return
+
+                if not self.access.user_exists(session_id):
                     self.delete_handler(self.fileno)
                     return
 
@@ -288,6 +296,10 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                 logging.print_general("wrong web request header session id value length %s" % session_id,
                                       self.__address)
                 self.response_http_error("400 Bad Request")
+                return
+
+            if not self.access.user_exists(byte_session_id):
+                self.response_http_error("403 Forbidden")
                 return
 
             logging.print_general("use_http_ext_session_id", self.__address)

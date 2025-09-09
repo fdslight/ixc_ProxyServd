@@ -46,3 +46,6 @@ class access(_access.access):
     def handle_user_change_signal(self):
         self.__users = {}
         self.load_configs()
+
+    def user_exists(self, user_id: bytes):
+        return user_id in self.__users
