@@ -29,11 +29,6 @@ void ip_handle(struct mbuf *m)
     unsigned char ip_unspec[]={0x00,0x00,0x00,0x00};
     unsigned char ip_broadcast[]={0xff,0xff,0xff,0xff};
 
-    if(!ipalloc_isset_ip(0)){
-        mbuf_put(m);
-        return;
-    }
-    
     // 限制数据包最大长度
     if(m->tail-m->offset>1500){
         mbuf_put(m);
@@ -46,6 +41,11 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    if(!ipalloc_isset_ip(0)){
+        mbuf_put(m);
+        return;
+    }
+    
     hdr_len=(header->ver_and_ihl & 0x0f) * 4;
 
     // 首先检查长度是否符合要求
@@ -89,12 +89,6 @@ void ip_handle(struct mbuf *m)
     }
 
     m->is_ipv6=0;
-
-    // 未设置IP地址丢弃数据包
-    if(!ipalloc_isset_ip(0)){
-        mbuf_put(m);
-        return;
-    }
 
     // 如果是在一个网段那么丢弃数据包
     if(ipalloc_is_lan(header->dst_addr,0) && m->from==MBUF_FROM_LAN){
