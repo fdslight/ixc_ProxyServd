@@ -59,6 +59,9 @@ class service(dispatcher.dispatcher):
         self.__max_tcp_conns = max_tcp_conns
         self.__cur_tcp_conns = 0
 
+        if not is_udp:
+            logging.print_info("TCP connection limit %s" % max_tcp_conns)
+
         self.create_poll()
 
         if is_udp:
