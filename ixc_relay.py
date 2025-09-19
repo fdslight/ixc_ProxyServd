@@ -27,8 +27,15 @@ class service(dispatcher.dispatcher):
 
     __limit_source_address = None
 
+    # 最大TCP连接数量
+    __max_tcp_conns = 0
+    # 当前tcp连接数量
+    __cur_tcp_conns = 0
+
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
-                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None, limit_source_address=None):
+                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None, limit_source_address=None,
+                  max_tcp_conns=0
+                  ):
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
@@ -49,6 +56,9 @@ class service(dispatcher.dispatcher):
         self.load_traffic_statistics()
 
         self.__listen_fd = -1
+        self.__max_tcp_conns = max_tcp_conns
+        self.__cur_tcp_conns = 0
+
         self.create_poll()
 
         if is_udp:
@@ -88,6 +98,27 @@ class service(dispatcher.dispatcher):
         dic = json.loads(s)
         self.__begin_time = int(dic["begin_time"])
         self.__cur_traffic_size = int(dic["traffic_size"])
+
+    def is_permit_tcp_conn(self):
+        """是否允许tcp连接"""
+        if self.__max_tcp_conns <= 0: return True
+        if self.__max_tcp_conns == self.__cur_tcp_conns:
+            logging.print_info("cannot accept connection,cur conns is %s,max conns is %s" % (self.__cur_tcp_conns,
+                                                                                             self.__max_tcp_conns))
+            return False
+        return True
+
+    def tcp_conn_inc(self):
+        """TCP连接数增加
+        """
+        self.__cur_tcp_conns += 1
+        logging.print_info("the current number of tcp connection is %s" % self.__cur_tcp_conns)
+
+    def tcp_conn_dec(self):
+        """TCP连接数减少"""
+        if self.__cur_tcp_conns <= 0: return
+        self.__cur_tcp_conns -= 1
+        logging.print_info("the current number of tcp connection is %s" % self.__cur_tcp_conns)
 
     def reset_traffic(self):
         now = time.time()
@@ -130,11 +161,15 @@ def main():
     --bind=address,port --redirect=host,port -p tcp | udp [--tcp-redirect-slave=host,port][-6] [--nofork]  
     [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
     [--limit-source-address-file=FILE]
+    [--max-tcp-conns=conn_num]
     """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "6p:",
-                                   ["nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
-                                    "udp-heartbeat-file=", "tcp-redirect-slave=", "limit-source-address-file="])
+                                   [
+                                       "nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
+                                       "udp-heartbeat-file=", "tcp-redirect-slave=", "limit-source-address-file=",
+                                       "max-tcp-conns="
+                                   ])
     except getopt.GetoptError:
         print(help_doc)
         return
@@ -161,6 +196,8 @@ def main():
 
     limit_source_address_file = None
 
+    max_tcp_conns = 0
+
     for k, v in opts:
         if k == "-6": force_ipv6 = True
         if k == "--bind": bind_s = v
@@ -174,6 +211,17 @@ def main():
         if k == "--udp-heartbeat-file": udp_heartbeat_file = v
         if k == "--tcp-redirect-slave": tcp_redirect_slave_s = v
         if k == "--limit-source-address-file": limit_source_address_file = v
+        if k == "--max-tcp-conns": max_tcp_conns = v
+
+    try:
+        max_tcp_conns = int(max_tcp_conns)
+    except ValueError:
+        print("ERROR:wrong max tcp conns value %s" % max_tcp_conns)
+        return
+
+    if max_tcp_conns < 1 or max_tcp_conns > 65535:
+        print("ERROR:wrong max tcp conns value %s" % max_tcp_conns)
+        return
 
     if limit_source_address_file is not None:
         if not os.path.isfile(limit_source_address_file):
@@ -241,6 +289,9 @@ def main():
         print("error,udp protocol not support tcp-redirect-slave")
         return
 
+    if protocol == "udp" and max_tcp_conns > 0:
+        print("WARNING:udp not have argument max_tcp_conns")
+
     if protocol == "udp" and udp_heartbeat_file:
         if not os.path.isfile(udp_heartbeat_file):
             print("error,not found udp heartbeat file %s" % udp_heartbeat_file)
@@ -292,9 +343,11 @@ def main():
 
     instance = service()
     try:
-        instance.ioloop(bind, redirect, is_udp=is_udp,is_ipv6=is_ipv6, force_ipv6=force_ipv6, limit_month_traffic=limit_month_traffic,
+        instance.ioloop(bind, redirect, is_udp=is_udp, is_ipv6=is_ipv6, force_ipv6=force_ipv6,
+                        limit_month_traffic=limit_month_traffic,
                         nofork=nofork, udp_heartbeat_address=udp_heartbeat_address,
-                        tcp_redirect_slave=tcp_redirect_slave, limit_source_address=limit_source_address)
+                        tcp_redirect_slave=tcp_redirect_slave, limit_source_address=limit_source_address,
+                        max_tcp_conns=max_tcp_conns)
     except KeyboardInterrupt:
         instance.release()
     except:

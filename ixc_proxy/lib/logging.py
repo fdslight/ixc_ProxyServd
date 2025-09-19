@@ -9,6 +9,12 @@ def print_general(text, address):
     sys.stdout.flush()
 
 
+def print_info(text):
+    s1 = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    print("%s\t%s" % (text, s1))
+    sys.stdout.flush()
+
+
 def print_error(text=""):
     s1 = "<error time='%s'>" % time.strftime("%Y-%m-%d %H:%M:%S %Z")
     s2 = "</error>"
