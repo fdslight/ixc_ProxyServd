@@ -115,13 +115,13 @@ class service(dispatcher.dispatcher):
         """TCP连接数增加
         """
         self.__cur_tcp_conns += 1
-        logging.print_info("the current number of tcp connection is %s" % self.__cur_tcp_conns)
+        logging.print_info("the number of current tcp connection is %s" % self.__cur_tcp_conns)
 
     def tcp_conn_dec(self):
         """TCP连接数减少"""
         if self.__cur_tcp_conns <= 0: return
         self.__cur_tcp_conns -= 1
-        logging.print_info("the current number of tcp connection is %s" % self.__cur_tcp_conns)
+        logging.print_info("the number of current tcp connection is %s" % self.__cur_tcp_conns)
 
     def reset_traffic(self):
         now = time.time()
