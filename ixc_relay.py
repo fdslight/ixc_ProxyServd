@@ -222,7 +222,7 @@ def main():
         print("ERROR:wrong max tcp conns value %s" % max_tcp_conns)
         return
 
-    if max_tcp_conns < 1 or max_tcp_conns > 65535:
+    if max_tcp_conns < 0 or max_tcp_conns > 65535:
         print("ERROR:wrong max tcp conns value %s" % max_tcp_conns)
         return
 
