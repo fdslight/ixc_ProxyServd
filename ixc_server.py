@@ -2,6 +2,7 @@
 
 
 import sys, getopt, os, signal, importlib, json, socket, struct
+from cgitb import enable
 
 try:
     import dns.message
@@ -68,6 +69,8 @@ class proxyd(dispatcher.dispatcher):
     __host_match = None
 
     __proxy = None
+
+    __enable_relay = None
 
     @property
     def http_configs(self):
@@ -142,7 +145,8 @@ class proxyd(dispatcher.dispatcher):
             self.__host_match.add_rule((host, flags,))
         return
 
-    def init_func(self, debug, configs):
+    def init_func(self, debug, configs, enable_relay=False):
+        self.__enable_relay = enable_relay
         self.create_poll()
 
         self.__configs = configs
@@ -541,7 +545,7 @@ class proxyd(dispatcher.dispatcher):
         self.__access.handle_user_change_signal()
 
 
-def __start_service(debug):
+def __start_service(debug, enable_relay=False):
     if not os.path.isfile("/usr/sbin/iptables"):
         print("ERROR:please install iptables")
         return
@@ -568,10 +572,10 @@ def __start_service(debug):
     cls = proxyd()
 
     if debug:
-        cls.ioloop(debug, configs)
+        cls.ioloop(debug, configs, enable_relay=enable_relay)
         return
     try:
-        cls.ioloop(debug, configs)
+        cls.ioloop(debug, configs, enable_relay=enable_relay)
     except:
         logging.print_error()
 
@@ -606,18 +610,21 @@ def main():
     help_doc = """
     -d      debug | start | stop    debug,start or stop application
     -u      user_configs            update configs         
+    --enable-relay                  enale relay mode
     """
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", [])
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", ["enable-relay"])
     except getopt.GetoptError:
         print(help_doc)
         return
     d = ""
     u = ""
+    enable_relay = False
 
     for k, v in opts:
         if k == "-d": d = v
         if k == "-u": u = v
+        if k == "--enable-relay": enable_relay = True
 
     if not u and not d:
         print(help_doc)
@@ -648,7 +655,7 @@ def main():
     if d == "debug": debug = True
     if d == "start": debug = False
 
-    __start_service(debug)
+    __start_service(debug, enable_relay=enable_relay)
 
 
 if __name__ == '__main__': main()
