@@ -2,7 +2,6 @@
 
 
 import sys, getopt, os, signal, importlib, json, socket, struct
-from cgitb import enable
 
 try:
     import dns.message
@@ -37,6 +36,8 @@ import ixc_proxy.lib.base_proto.utils as proto_utils
 import ixc_proxy.lib.dns_utils as dns_utils
 import ixc_proxy.lib.file_parser as rule_parser
 import ixc_proxy.lib.host_match as host_match
+import ixc_proxy.handlers.tunnelc as tunnelc
+import ixc_proxy.lib.base_proto.tunnel_over_http as tunnel_over_http
 
 
 class proxyd(dispatcher.dispatcher):
@@ -72,6 +73,10 @@ class proxyd(dispatcher.dispatcher):
 
     __enable_relay = None
 
+    __relay_tunnel_fd = None
+    __relay_tunnel_cfg = None
+    __relay_session_id = None
+
     @property
     def http_configs(self):
         configs = self.__configs.get("tunnel_over_http", {})
@@ -92,6 +97,9 @@ class proxyd(dispatcher.dispatcher):
     def netpkt_sent_cb(self, byte_data: bytes, _id: bytes, _from: int):
         # 如果数据来源于LAN那么发送到TUN设备
         if _from == proxy.FROM_LAN:
+            if self.__enable_relay:
+                self.send_msg_to_relay_tunnel(proto_utils.ACT_IPDATA, byte_data)
+                return
             self.get_handler(self.__tundev_fileno).send_msg(byte_data)
             return
         self.send_msg_to_tunnel(_id, proto_utils.ACT_IPDATA, byte_data)
@@ -147,6 +155,13 @@ class proxyd(dispatcher.dispatcher):
 
     def init_func(self, debug, configs, enable_relay=False):
         self.__enable_relay = enable_relay
+        if enable_relay:
+            self.__relay_tunnel_cfg = configfile.ini_parse_from_file("%s/ixc_configs/proxy_relay.ini" % BASE_DIR)
+            logging.print_info("use relay mode")
+
+        self.__relay_tunnel_fd = -1
+        self.__relay_session_id = b""
+
         self.create_poll()
 
         self.__configs = configs
@@ -156,6 +171,7 @@ class proxyd(dispatcher.dispatcher):
         self.load_dns_rules()
 
         self.__proxy = proxy.proxy(self.netpkt_sent_cb, self.udp_recv_cb)
+        self.__proxy.relay_mode_enable(enable_relay)
 
         signal.signal(signal.SIGINT, self.__exit)
         signal.signal(signal.SIGUSR1, self.__handle_change_signal)
@@ -226,7 +242,8 @@ class proxyd(dispatcher.dispatcher):
         self.__udp_fileno = self.create_handler(-1, tunnels.udp_tunnel, listen, self.__udp_crypto,
                                                 self.__crypto_configs, is_ipv6=False)
 
-        self.__tundev_fileno = self.create_handler(-1, tundev.tundev, self.__DEVNAME)
+        if not self.__enable_relay:
+            self.__tundev_fileno = self.create_handler(-1, tundev.tundev, self.__DEVNAME)
         self.__access = access.access(self)
 
         nat_config = configs["nat"]
@@ -295,21 +312,25 @@ class proxyd(dispatcher.dispatcher):
         self.__dns_addr = dns_addr
         self.__dns6_addr = dnsv6_addr
 
-        self.__dns_fileno = self.create_handler(-1, dns_proxy.dns_client, dns_addr, is_ipv6=is_ipv6)
+        if not self.__enable_relay:
+            self.__dns_fileno = self.create_handler(-1, dns_proxy.dns_client, dns_addr, is_ipv6=is_ipv6)
 
         if dnsv6_addr != "::":
-            self.__dns6_fileno = self.create_handler(-1, dns_proxy.dns_client, dnsv6_addr, is_ipv6=True)
+            if not self.__enable_relay:
+                self.__dns6_fileno = self.create_handler(-1, dns_proxy.dns_client, dnsv6_addr, is_ipv6=True)
+            ''''''
 
         enable_ipv6 = bool(int(nat_config["enable_nat66"]))
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
         eth_name = nat_config["eth_name"]
 
-        if enable_ipv6:
+        if enable_ipv6 and not self.__enable_relay:
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip_subnet"])
-        self.__config_gateway(subnet, prefix, eth_name)
+
+        if not self.__enable_relay: self.__config_gateway(subnet, prefix, eth_name)
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
 
@@ -411,12 +432,13 @@ class proxyd(dispatcher.dispatcher):
         if action == proto_utils.ACT_DNS:
             # 检查是否允许DNS请求
             if not self.is_permitted_dns_request(session_id, message): return
-            # 如果有填写DNSv6服务器那么转发AAAA流量到DNSv6服务器
-            if self.__dns6_fileno > 0 and dns_utils.is_aaaa_request(message):
+            # 如果有填写DNSv6服务器优先转发到DNSv6服务器
+            if self.__dns6_fileno > 0:
                 self.get_handler(self.__dns6_fileno).send_msg(session_id, message)
             else:
                 self.get_handler(self.__dns_fileno).send_msg(session_id, message)
             return
+
         if action == proto_utils.ACT_IPDATA:
             self.proxy.netpkt_handle(session_id, message, proxy.FROM_LAN)
             return
@@ -522,6 +544,125 @@ class proxyd(dispatcher.dispatcher):
             os.system(cmd)
         return
 
+    @property
+    def enable_relay(self):
+        return self.__enable_relay
+
+    def __open_tunnel(self):
+        conn = self.__relay_tunnel_cfg["connection"]
+        host = conn["host"]
+        port = int(conn["port"])
+        enable_ipv6 = bool(int(conn["enable_ipv6"]))
+        conn_timeout = int(conn["conn_timeout"])
+        tunnel_type = conn["tunnel_type"]
+        redundancy = bool(int(conn.get("udp_tunnel_redundancy", 1)))
+        over_https = bool(int(conn.get("tunnel_over_https", 0)))
+
+        use_https = False
+
+        server_host_from_nat = bool(int(conn.get("server_host_from_nat", 0)))
+
+        only_permit_send_udp_data_when_first_recv_peer = bool(
+            int(conn.get("only_permit_send_udp_data_when_first_recv_peer", 0)))
+
+        bind_udp_local_port = int(conn.get("bind_udp_local_port", 0))
+
+        if bind_udp_local_port != 0 and not netutils.is_port_number(bind_udp_local_port):
+            logging.print_error("proxy tunnel:wrong bind udp local port value %s" % bind_udp_local_port)
+            return
+
+        is_udp = False
+
+        enable_heartbeat = bool(int(conn.get("enable_heartbeat", 0)))
+        heartbeat_timeout = int(conn.get("heartbeat_timeout", 15))
+        if heartbeat_timeout < 10:
+            logging.print_error("proxy tunnel: wrong heartbeat_timeout value from config")
+            return
+
+        m = "freenet.lib.crypto.%s" % conn["crypto_module"]
+        try:
+            self.__tcp_crypto = importlib.import_module("%s.%s_tcp" % (m, conn["crypto_module"]))
+            self.__udp_crypto = importlib.import_module("%s.%s_udp" % (m, conn["crypto_module"]))
+        except ImportError:
+            print("proxy tunnel:cannot found tcp or udp crypto module")
+            return
+
+        if tunnel_type.lower() == "udp":
+            handler = tunnelc.udp_tunnel
+            crypto = self.__udp_crypto
+            is_udp = True
+        else:
+            handler = tunnelc.tcp_tunnel
+            crypto = self.__tcp_crypto
+            if over_https:
+                crypto = tunnel_over_http
+                use_https = True
+            ''''''
+
+        if conn_timeout < 120:
+            raise ValueError("the conn timeout must be more than 120s")
+
+        if enable_heartbeat and conn_timeout - heartbeat_timeout < 30:
+            raise ValueError("the headerbeat_timeout value wrong")
+
+        kwargs = {"conn_timeout": conn_timeout, "is_ipv6": enable_ipv6, "enable_heartbeat": enable_heartbeat,
+                  "heartbeat_timeout": heartbeat_timeout, "host": host}
+
+        if not is_udp:
+            kwargs["tunnel_over_https"] = over_https
+        else:
+            kwargs["bind_udp_local_port"] = bind_udp_local_port
+            kwargs["only_permit_send_udp_data_when_first_recv_peer"] = only_permit_send_udp_data_when_first_recv_peer
+            kwargs["server_host_from_nat"] = server_host_from_nat
+
+        if tunnel_type.lower() == "udp": kwargs["redundancy"] = redundancy
+
+        username = conn["username"]
+        passwd = conn["password"]
+
+        self.__relay_session_id = proto_utils.gen_session_id(username, passwd)
+
+        if use_https:
+            self.__relay_tunnel_fd = self.create_handler(-1, handler, crypto, None, **kwargs)
+            self.get_handler(self.__relay_tunnel_fd).set_use_http_thin_protocol(True)
+        else:
+            self.__relay_tunnel_fd = self.create_handler(-1, handler, crypto, self.__crypto_configs, **kwargs)
+
+        rs = self.get_handler(self.__relay_tunnel_fd).create_tunnel((host, port,))
+        if not rs:
+            self.delete_handler(self.__relay_tunnel_fd)
+
+    def tell_tunnel_close(self):
+        self.__relay_tunnel_fd = -1
+
+    def tunnel_conn_ok(self):
+        pass
+
+    def send_msg_to_relay_tunnel(self, action: int, message: bytes):
+        if not self.__relay_tunnel_fd < 0:
+            self.__open_tunnel()
+        if not self.__relay_tunnel_fd < 0:
+            return
+        self.get_handler(self.__relay_tunnel_fd).send_msg_to_tunnel(action, message)
+
+    def handle_msg_from_relay_tunnel(self, session_id, action, message):
+        if session_id != self.__relay_session_id: return False
+        if action == proto_utils.ACT_DNS:
+            return
+
+        if action == proto_utils.ACT_IPDATA:
+            self.proxy.netpkt_handle(bytes(16), message, proxy.FROM_WAN)
+
+        return True
+
+    @property
+    def debug(self):
+        return self.__debug
+
+    @property
+    def relay_session_id(self):
+        return self.__relay_session_id
+
     def __exit(self, signum, frame):
         if self.handler_exists(self.__dns6_fileno):
             self.delete_handler(self.__dns6_fileno)
@@ -533,11 +674,13 @@ class proxyd(dispatcher.dispatcher):
             self.delete_handler(self.__tcp_fileno)
 
         nat = self.__configs["nat"]
-        subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
-        self.__unconfig_gw(subnet, prefix, is_ipv6=True)
-        subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
-        self.__unconfig_gw(subnet, prefix, is_ipv6=False)
 
+        if not self.__enable_relay:
+            subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
+            self.__unconfig_gw(subnet, prefix, is_ipv6=True)
+            subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
+            self.__unconfig_gw(subnet, prefix, is_ipv6=False)
+        ''''''
         sys.exit(0)
 
     def __handle_change_signal(self, signum, frame):

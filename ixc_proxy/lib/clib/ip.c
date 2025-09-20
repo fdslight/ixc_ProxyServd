@@ -121,6 +121,12 @@ void ip_handle(struct mbuf *m)
         return;
     }
 
+    // relay模式不考虑分片处理
+    if(relay_mode_is_enabled()){
+        static_nat_handle(m);
+        return;
+    }
+
     frag_info=ntohs(header->frag_info);
     frag_off=frag_info & 0x1fff;
     mf=frag_info & 0x2000;

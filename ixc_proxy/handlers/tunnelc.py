@@ -163,7 +163,7 @@ class tcp_tunnel(tcp_handler.tcp_handler):
                 if not pkt_info: break
 
                 if self.__isset_http_thin_protocol:
-                    session_id = self.dispatcher.session_id
+                    session_id = self.dispatcher.relay_session_id
                     action, message = pkt_info
                 else:
                     session_id, action, message = pkt_info
@@ -176,11 +176,11 @@ class tcp_tunnel(tcp_handler.tcp_handler):
                                                          self.__server_address)
                     continue
                 if action == proto_utils.ACT_PING:
-                    self.send_msg_to_tunnel(self.dispatcher.session_id, proto_utils.ACT_PONG, proto_utils.rand_bytes())
+                    self.send_msg_to_tunnel(self.dispatcher.relay_session_id, proto_utils.ACT_PONG, proto_utils.rand_bytes())
                     continue
 
                 self.__update_time = time.time()
-                self.dispatcher.handle_msg_from_tunnel(session_id, action, message)
+                self.dispatcher.handle_msg_from_relay_tunnel(session_id, action, message)
             ''''''
         return
 
@@ -203,7 +203,7 @@ class tcp_tunnel(tcp_handler.tcp_handler):
     def send_heartbeat(self):
         self.__heartbeat_up_time = time.time()
         self.__is_sent_heartbeat = True
-        self.send_msg_to_tunnel(self.dispatcher.session_id, proto_utils.ACT_PING, proto_utils.rand_bytes())
+        self.send_msg_to_tunnel(self.dispatcher.relay_session_id, proto_utils.ACT_PING, proto_utils.rand_bytes())
 
         if self.debug:
             logging.print_general("TUNNEL:send heartbeat ping request", self.__server_address)
@@ -397,7 +397,7 @@ class tcp_tunnel(tcp_handler.tcp_handler):
         origin = ("Origin", "https://%s" % self.__https_sni_host)
 
         if self.__isset_http_thin_protocol:
-            session_id = base64.b16encode(self.dispatcher.session_id).decode("iso-8859-1")
+            session_id = base64.b16encode(self.dispatcher.relay_session_id).decode("iso-8859-1")
             kv_pairs.append(
                 ("X-User-Session-Id", session_id)
             )
@@ -604,11 +604,11 @@ class udp_tunnel(udp_handler.udp_handler):
 
         if action == proto_utils.ACT_PONG: return
         if action == proto_utils.ACT_PING:
-            self.send_msg_to_tunnel(self.dispatcher.session_id, proto_utils.ACT_PONG, proto_utils.rand_bytes())
+            self.send_msg_to_tunnel(self.dispatcher.relay_session_id, proto_utils.ACT_PONG, proto_utils.rand_bytes())
             return
 
         self.__update_time = time.time()
-        self.dispatcher.handle_msg_from_tunnel(session_id, action, byte_data)
+        self.dispatcher.handle_msg_from_relay_tunnel(session_id, action, byte_data)
 
     def udp_writable(self):
         self.remove_evt_write(self.fileno)
@@ -634,7 +634,7 @@ class udp_tunnel(udp_handler.udp_handler):
 
         if self.__enable_heartbeat:
             if t >= self.__heartbeat_timeout:
-                self.send_msg_to_tunnel(self.dispatcher.session_id, proto_utils.ACT_PING, proto_utils.rand_bytes())
+                self.send_msg_to_tunnel(self.dispatcher.relay_session_id, proto_utils.ACT_PING, proto_utils.rand_bytes())
             ''''''
         self.set_timeout(self.fileno, self.__LOOP_TIMEOUT)
 
