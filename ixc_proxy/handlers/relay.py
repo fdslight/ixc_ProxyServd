@@ -56,7 +56,10 @@ class tcp_listener(tcp_handler.tcp_handler):
                     cs.close()
                     continue
                 ''''''
-
+            # 检查连接数量是否超出范围,超出范围关闭连接
+            if not self.dispatcher.is_permit_tcp_conn():
+                cs.close()
+                return
             is_master = self.__cur_is_master
 
             if self.__redirect_slave_address:
@@ -137,6 +140,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         self.set_timeout(self.fileno, 10)
 
         logging.print_general("connected_from", (caddr[0], caddr[1],))
+        self.dispatcher.tcp_conn_inc()
 
         return self.fileno
 
@@ -185,6 +189,8 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
 
         self.unregister(self.fileno)
         self.close()
+
+        self.dispatcher.tcp_conn_dec()
 
     def tcp_timeout(self):
         t = time.time()
