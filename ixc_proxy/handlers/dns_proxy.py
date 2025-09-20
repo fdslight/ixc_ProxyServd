@@ -2,7 +2,6 @@
 import pywind.evtframework.handlers.udp_handler as udp_handler
 import socket, struct, time
 import ixc_proxy.lib.logging as logging
-import ixc_proxy.lib.base_proto.utils as proto_utils
 
 
 class dns_client(udp_handler.udp_handler):
@@ -46,9 +45,6 @@ class dns_client(udp_handler.udp_handler):
         # 此处检查地址是否是DNS服务器
         if address[0] != self.__dns_server: return
         if address[1] != 53: return
-        self.handle_dns_msg(message)
-
-    def handle_dns_msg(self, message):
         if len(message) < 8: return
 
         wan_dns_id, = struct.unpack("!H", message[0:2])
@@ -63,7 +59,6 @@ class dns_client(udp_handler.udp_handler):
             message[2:]
         ]
         del self.__map[wan_dns_id]
-
         self.dispatcher.handle_dns_msg_from_server(_id, b"".join(_list))
 
     def udp_writable(self):
@@ -91,11 +86,6 @@ class dns_client(udp_handler.udp_handler):
             struct.pack("!H", wan_dns_id),
             messsage[2:],
         ]
-
-        if self.dispatcher.enable_relay:
-            self.dispatcher.send_msg_to_relay_tunnel(proto_utils.ACT_DNS, b"".join(_list))
-            return
-
         self.sendto(b"".join(_list), (self.__dns_server, 53))
         self.add_evt_write(self.fileno)
 

@@ -34,8 +34,6 @@ typedef struct{
 static PyObject *ip_sent_cb=NULL;
 /// UDP接收回调函数
 static PyObject *udp_recv_cb=NULL;
-/// 是否开启中继模式
-static int enable_relay_mode=0;
 
 
 static void ixc_segfault_handle(int signum)
@@ -101,11 +99,6 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
     Py_XDECREF(result);
 
     return 0; 
-}
-
-int relay_mode_is_enabled(void)
-{
-    return enable_relay_mode;
 }
 
 static void
@@ -395,16 +388,6 @@ proxy_clog_set(PyObject *self,PyObject *args)
     Py_RETURN_NONE;
 }
 
-static PyObject *
-proxy_relay_mode_enable(PyObject *self,PyObject *args)
-{
-    if(!PyArg_ParseTuple(args,"p",&enable_relay_mode)) return NULL;
-
-    DBG("relay mode value is %d\r\n",enable_relay_mode);
-    
-    Py_RETURN_NONE;
-}
-
 static PyMemberDef proxy_members[]={
     {NULL}
 };
@@ -425,8 +408,6 @@ static PyMethodDef proxy_methods[]={
     {"ipalloc_subnet_set",(PyCFunction)proxy_ipalloc_subnet_set,METH_VARARGS,"set ipalloc subnet"},
 
     {"clog_set",(PyCFunction)proxy_clog_set,METH_VARARGS,"set C language log path"},
-
-    {"relay_mode_enable",(PyCFunction)proxy_relay_mode_enable,METH_VARARGS,"enable or disable relay mode"},
     
     {NULL,NULL,0,NULL}
 };

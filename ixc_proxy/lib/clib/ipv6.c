@@ -23,7 +23,6 @@ void ipv6_handle(struct mbuf *m)
     struct netutil_ip6_frag_header *frag_header=NULL;
     int payload_len=0;
     unsigned char next_header;
-    int is_supported=0;
 
     DBG_FLAGS;
 
@@ -75,29 +74,6 @@ void ipv6_handle(struct mbuf *m)
     if(m->from==MBUF_FROM_WAN && (header->next_header==17 || header->next_header==136)){
         //PRINT_IP6(" ",header->dst_addr);
         mbuf_put(m);
-        return;
-    }
-
-    switch (next_header){
-        case 6:
-        case 58:
-        case 17:
-        case 136:
-        case 44:
-            is_supported=1;
-            break;
-        default:
-            is_supported=0;
-            break;
-    }
-
-    if(!is_supported){
-        mbuf_put(m);
-        return;
-    }
-    
-    if(relay_mode_is_enabled()){
-        static_nat_handle(m);
         return;
     }
 
