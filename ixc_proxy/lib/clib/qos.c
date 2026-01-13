@@ -22,11 +22,11 @@ inline static int qos_calc_slot(void *header,int is_ipv6)
 {
     struct netutil_iphdr *iphdr;
     struct netutil_ip6hdr *ip6hdr;
-    struct netutil_udphdr *udphdr;
-    int hdr_len;
+    //struct netutil_udphdr *udphdr;
+    //int hdr_len;
 
     unsigned long long v;
-    unsigned char next_header,*s=header;
+    //unsigned char next_header,*s=header;
     unsigned char buf[8]={
         0,0,0,0,
         0,0,0,0
@@ -34,24 +34,23 @@ inline static int qos_calc_slot(void *header,int is_ipv6)
 
     if(is_ipv6){
         ip6hdr=header;
-        next_header=ip6hdr->next_header;
-        hdr_len=40;
-        
-        buf[0]=ip6hdr->src_addr[14];
-        buf[1]=ip6hdr->src_addr[15];
-        buf[2]=ip6hdr->dst_addr[14];
-        buf[3]=ip6hdr->dst_addr[15];
+        //next_header=ip6hdr->next_header;
+        //hdr_len=40;
+        memcpy(&buf[0],&(ip6hdr->src_addr[12]),4);
+        memcpy(&buf[4],&(ip6hdr->dst_addr[12]),4);
     }else{
         iphdr=header;
-        next_header=iphdr->protocol;
-        hdr_len=(iphdr->ver_and_ihl & 0x0f) * 4;
+        //next_header=iphdr->protocol;
+        //hdr_len=(iphdr->ver_and_ihl & 0x0f) * 4;
+        
+        memcpy(&buf[0],iphdr->src_addr,4);
+        memcpy(&buf[4],iphdr->dst_addr,4);
 
-        buf[0]=iphdr->src_addr[2];
-        buf[1]=iphdr->src_addr[3];
-        buf[2]=iphdr->dst_addr[2];
-        buf[3]=iphdr->dst_addr[3];
+        //buf[2]=iphdr->dst_addr[2];
+        //buf[3]=iphdr->dst_addr[3];
     }
 
+    /*
     switch (next_header){
         case 6:
         case 17:
@@ -63,7 +62,7 @@ inline static int qos_calc_slot(void *header,int is_ipv6)
             memcpy(&buf[6],&(udphdr->dst_port),2);
         default:
             break;
-    }
+    }*/
     
     memcpy(&v,buf,8);
 
