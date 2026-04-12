@@ -45,8 +45,8 @@ class service(dispatcher.dispatcher):
         self.__limit_source_address = {}
         self.__limit_source_address_cache = {}
 
-        for addr, prefix, is_ipv6 in limit_source_address:
-            self.__limit_source_address[addr] = (prefix, is_ipv6,)
+        for addr, prefix, x_is_ipv6 in limit_source_address:
+            self.__limit_source_address[addr] = (prefix, x_is_ipv6,)
         # 限制的流量大小单位为GB
         self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
         if is_udp:
