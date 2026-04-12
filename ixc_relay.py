@@ -80,10 +80,6 @@ class service(dispatcher.dispatcher):
                                                redirect_is_ipv6=force_ipv6, udp_heartbeat_address=udp_heartbeat_address,
                                                tcp_redirect_slave=tcp_redirect_slave)
 
-    @property
-    def limit_source_address(self):
-        return self.__limit_source_address
-
     def source_addr_is_allowed_access(self, source_address: str, is_ipv6=False):
         if not self.__limit_source_address: return True
         # 首先检查缓存是否存在
