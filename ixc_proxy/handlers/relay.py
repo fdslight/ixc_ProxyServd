@@ -15,8 +15,13 @@ class tcp_listener(tcp_handler.tcp_handler):
     __cur_is_master = None
     __master_ok = False
 
+    __listen_is_ipv6 = None
+
     def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
                   tcp_redirect_slave=None, **kwargs):
+
+        self.__listen_is_ipv6 = listen_is_ipv6
+
         if listen_is_ipv6:
             fa = socket.AF_INET6
         else:
@@ -50,11 +55,9 @@ class tcp_listener(tcp_handler.tcp_handler):
                 break
 
             # 如果有限制名单那么限制连接地址
-            limit_source_address = self.dispatcher.limit_source_address
-            if limit_source_address:
-                if caddr[0] not in limit_source_address:
-                    cs.close()
-                    continue
+            if not self.dispatcher.source_addr_is_allowed_access(caddr[0], is_ipv6=self.__listen_is_ipv6):
+                cs.close()
+                continue
                 ''''''
             # 检查连接数量是否超出范围,超出范围关闭连接
             if not self.dispatcher.is_permit_tcp_conn():
@@ -329,8 +332,12 @@ class udp_listener(udp_handler.udp_handler):
 
     __udp_heartbeat_address = None
 
+    __listen_is_ipv6 = None
+
     def init_func(self, creator_fd, address, redirect_address, listen_is_ipv6=False, redirect_is_ipv6=False,
                   udp_heartbeat_address=None, **kwargs):
+
+        self.__listen_is_ipv6 = listen_is_ipv6
         self.__session_fds = {}
         self.__session_fds_reverse = {}
 
@@ -374,10 +381,8 @@ class udp_listener(udp_handler.udp_handler):
 
     def udp_readable(self, message, address):
         # 如果有限制地址那么检查地址是否在允许范围内
-        limit_source_address = self.dispatcher.limit_source_address
-        if limit_source_address:
-            if address[0] not in limit_source_address: return
-            ''''''
+        if not self.dispatcher.source_addr_is_allowed_access(address[0], is_ipv6=self.__listen_is_ipv6):
+            return
         # 丢弃心跳包
         if message == b"\0": return
 

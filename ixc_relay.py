@@ -14,6 +14,7 @@ import ixc_proxy.handlers.relay as relay
 import ixc_proxy.lib.cfg_check as cfg_check
 import ixc_proxy.lib.logging as logging
 import ixc_proxy.lib.address_file as address_file
+import pywind.lib.netutils as netutils
 
 
 class service(dispatcher.dispatcher):
@@ -26,6 +27,7 @@ class service(dispatcher.dispatcher):
     __begin_time = None
 
     __limit_source_address = None
+    __limit_source_address_cache = None
 
     # 最大TCP连接数量
     __max_tcp_conns = 0
@@ -39,7 +41,12 @@ class service(dispatcher.dispatcher):
         self.__cur_traffic_size = 0
         self.__up_time = time.time()
         self.__begin_time = 0
-        self.__limit_source_address = limit_source_address
+
+        self.__limit_source_address = {}
+        self.__limit_source_address_cache = {}
+
+        for addr, prefix, is_ipv6 in limit_source_address:
+            self.__limit_source_address[addr] = (prefix, is_ipv6,)
         # 限制的流量大小单位为GB
         self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
         if is_udp:
@@ -76,6 +83,25 @@ class service(dispatcher.dispatcher):
     @property
     def limit_source_address(self):
         return self.__limit_source_address
+
+    def source_addr_is_allowed_access(self, source_address: str, is_ipv6=False):
+        if not self.__limit_source_address: return True
+        # 首先检查缓存是否存在
+        if source_address in self.__limit_source_address_cache:
+            return self.__limit_source_address_cache[source_address][0]
+        prefix = 32
+        if is_ipv6: prefix = 128
+        is_found = False
+        for i in range(prefix):
+            n = i + 1
+            subnet = netutils.calc_subnet(source_address, n, is_ipv6=is_ipv6)
+            if subnet in self.__limit_source_address:
+                is_found = True
+                break
+            ''''''
+        # 加入到缓存中
+        self.__limit_source_address_cache[source_address] = (is_found, time.time(),)
+        return is_found
 
     def traffic_statistics(self, traffic_size):
         self.__cur_traffic_size += traffic_size
@@ -141,12 +167,25 @@ class service(dispatcher.dispatcher):
             f.write(s)
         f.close()
 
+    def clear_source_addr_limit_cache(self):
+        """清除源地址缓存
+        """
+        now = time.time()
+        dels = []
+        for addr in self.__limit_source_address_cache:
+            is_permit, t = self.__limit_source_address_cache[addr]
+            if now - t >= 600: dels.append(addr)
+        for addr in dels:
+            logging.print_info("clear source address limit cache ok for address %s" % addr)
+            del self.__limit_source_address_cache[addr]
+
     def myloop(self):
         now = time.time()
-        # 每隔一段时间刷新流量统计到文件
+        # 每隔一段时间动态执行
         if now - self.__up_time > 180:
             self.flush_traffic_statistics()
             self.reset_traffic()
+            self.clear_source_addr_limit_cache()
             self.__up_time = now
         ''''''
 
