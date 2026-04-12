@@ -115,5 +115,5 @@ def parse_address_list_from_file(fpath: str):
 # is_ok,address=parse_from_file("../../ixc_configs/udp_heartbeat_address_example.txt")
 # print(is_ok,address)
 
-is_ok, ok_address = parse_address_list_from_file("../../ixc_configs/limit_source_address_example.txt")
-print(is_ok, ok_address)
+#is_ok, ok_address = parse_address_list_from_file("../../ixc_configs/limit_source_address_example.txt")
+#print(is_ok, ok_address)
