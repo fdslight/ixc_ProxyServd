@@ -224,6 +224,7 @@ class redirect_tcp_handler(tcp_handler.tcp_handler):
         if not self.dispatcher.have_traffic():
             self.delete_handler(self.fileno)
             return
+        self.__time = time.time()
         size = len(byte_data)
         self.__traffic_size += size
         self.dispatcher.traffic_statistics(size)
