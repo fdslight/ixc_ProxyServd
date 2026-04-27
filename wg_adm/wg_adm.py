@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # 实现wireguard客户端创建便携工具
-import os, sys, getopt
+import os, sys, getopt,subprocess
 
 
 def gen_key():
-    os.system("wg genkey | tee privatekey | wg pubkey > publickey")
+    subprocess.call("wg genkey | tee privatekey | wg pubkey > publickey",shell=True)
 
     with open("privatekey", "r") as f:
         privatekey = f.read()

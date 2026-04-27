@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-import sys, getopt, os, signal, importlib, json, socket, struct
+import sys, getopt, os, signal, importlib, json, socket, struct, subprocess
 
 try:
     import dns.message
@@ -334,11 +334,11 @@ class proxyd(dispatcher.dispatcher):
     def read_os_default_v6_router(self):
         """获取操作系统默认IPv6路由
         """
-        f = os.popen("ip -6 route | grep default | awk -F ' ' '{print $3}'")
-        router_address = f.read()
+        rs = subprocess.run("ip -6 route | grep default | awk -F ' ' '{print $3}'", capture_output=True, shell=True)
+        router_address = rs.stdout.decode()
         router_address = router_address.replace("\n", "")
         router_address = router_address.replace("\r", "")
-        f.close()
+
         if not router_address: return None
 
         return router_address
@@ -467,37 +467,42 @@ class proxyd(dispatcher.dispatcher):
         :return:
         """
         # 添加一条到tun设备的IPV4路由
-        cmd = "ip route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME)
-        os.system(cmd)
-        # 开启ip forward
-        os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
-        # 开启IPV4 NAT
-
-        os.system("iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,))
-        os.system("iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
+        cmds = [
+            "ip route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME),
+            "echo 1 > /proc/sys/net/ipv4/ip_forward",
+            "iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,),
+            "iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix),
+        ]
+        for cmd in cmds: subprocess.call(cmd, shell=True)
 
     def __config_gateway6(self, subnet, prefix, eth_name):
         router_address = self.read_os_default_v6_router()
 
-        os.system("ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME))
-        os.system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
-        os.system("ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,))
-        os.system("ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix))
+        cmds = [
+            "ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME),
+            "echo 1 >/proc/sys/net/ipv6/conf/all/forwarding",
+            "ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,),
+            "ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix)
+        ]
+        for cmd in cmds: subprocess.call(cmd, shell=True)
 
         # 检查IPv6网关是否存在,修改机器网络参数后,IPv6默认网关可能消失
         router_address2 = self.read_os_default_v6_router()
         if not router_address2:
-            if router_address: os.system("ip -6 route add default via %s dev %s" % (router_address, eth_name,))
+            if router_address: subprocess.call("ip -6 route add default via %s dev %s" % (router_address, eth_name,),
+                                               shell=True)
         ''''''
 
     def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
         while 1:
             line_numbers = []
             if is_ipv6:
-                fdst = os.popen("ip6tables -L -n --line-number | grep %s/%s" % (subnet, prefix))
+                cmd = "ip6tables -L -n --line-number | grep %s/%s" % (subnet, prefix)
             else:
-                fdst = os.popen("iptables -L -n --line-number | grep %s/%s" % (subnet, prefix))
-            for line in fdst:
+                cmd = "iptables -L -n --line-number | grep %s/%s" % (subnet, prefix)
+            rs = subprocess.run(cmd, capture_output=True, shell=True)
+            output_list = rs.stdout.decode().split("\n")
+            for line in output_list:
                 line = line.replace("\n", "")
                 line = line.replace("\r", "")
                 _list = line.split(" ")
@@ -507,7 +512,6 @@ class proxyd(dispatcher.dispatcher):
                 except ValueError:
                     continue
                 line_numbers.append(line_number)
-            fdst.close()
             if not line_numbers: break
             i = line_numbers[0]
             # 每次只删除一条,因为删除后序号会发生变化
@@ -515,7 +519,7 @@ class proxyd(dispatcher.dispatcher):
                 cmd = "ip6tables -D FORWARD %s" % i
             else:
                 cmd = "iptables -D FORWARD %s" % i
-            os.system(cmd)
+            subprocess.call(cmd, shell=True)
         return
 
     def __exit(self, signum, frame):
