@@ -211,7 +211,11 @@ class parser(object):
         if not real_header: return
 
         session_id, timestamp, pkt_len, payload_len, tot_seg, seq, action = self.__parse_header(real_header)
-        real_body = self.unwrap_body(payload_len, packet[self.__fixed_header_size:])
+
+        try:
+            real_body = self.unwrap_body(payload_len, packet[self.__fixed_header_size:])
+        except proto_utils.ProtoError:
+            return None
 
         self.__pkt_len = pkt_len
 
