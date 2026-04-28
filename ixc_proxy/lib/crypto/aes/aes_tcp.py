@@ -71,7 +71,7 @@ class decrypt(tunnel.parser):
         """重写这个方法,用于协议配置"""
         self.__set_aes_key(config["key"])
 
-
+""""
 import ixc_proxy.lib.base_proto.utils as proto_utils
 
 key = "name"
@@ -99,3 +99,4 @@ parser.input(e_rs)
 while parser.can_continue_parse():
     parser.parse()
 print(parser.get_pkt())
+"""
