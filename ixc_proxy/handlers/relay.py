@@ -483,7 +483,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         self.remove_evt_write(self.fileno)
 
     def udp_error(self):
-        self.handler_ctl(self.__creator, "conn_err")
+        self.ctl_handler(self.__creator, "conn_err")
 
     def udp_delete(self):
         self.unregister(self.fileno)
@@ -493,7 +493,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         t = time.time()
 
         if t - self.__time >= TIMEOUT:
-            self.handler_ctl(self.__creator, "conn_err")
+            self.ctl_handler(self.__creator, "conn_err")
         else:
             self.set_timeout(self.fileno, 10)
         return
