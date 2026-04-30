@@ -5,7 +5,7 @@ import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.evtframework.handlers.udp_handler as udp_handler
 import ixc_proxy.lib.logging as logging
 
-TIMEOUT = 75
+TIMEOUT = 70
 
 
 class tcp_listener(tcp_handler.tcp_handler):
@@ -483,7 +483,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         self.remove_evt_write(self.fileno)
 
     def udp_error(self):
-        self.ctl_handler(self.__creator, "conn_err")
+        self.ctl_handler(self.fileno, self.__creator, "conn_err")
 
     def udp_delete(self):
         self.unregister(self.fileno)
@@ -493,7 +493,7 @@ class redirect_udp_client(udp_handler.udp_handler):
         t = time.time()
 
         if t - self.__time >= TIMEOUT:
-            self.ctl_handler(self.__creator, "conn_err")
+            self.ctl_handler(self.fileno, self.__creator, "conn_err")
         else:
             self.set_timeout(self.fileno, 10)
         return
