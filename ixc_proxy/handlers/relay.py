@@ -56,7 +56,7 @@ class tcp_listener(tcp_handler.tcp_handler):
 
             # 如果有限制名单那么限制连接地址
             if not self.dispatcher.source_addr_is_allowed_access(caddr[0], is_ipv6=self.__listen_is_ipv6):
-                logging.print_general("deny access", (caddr[0],caddr[1]))
+                logging.print_general("deny access", (caddr[0], caddr[1]))
                 cs.close()
                 continue
                 ''''''
@@ -423,6 +423,7 @@ class udp_listener(udp_handler.udp_handler):
             address = self.__session_fds[from_fd]
             name = "%s-%s" % (address[0], address[1],)
             self.delete_handler(from_fd)
+            logging.print_general("close udp redirect from ", address)
             del self.__session_fds[from_fd]
             del self.__session_fds_reverse[name]
         return
