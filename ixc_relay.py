@@ -27,6 +27,7 @@ class service(dispatcher.dispatcher):
     __begin_time = None
 
     __limit_source_address = None
+    __use_limit_blacklist_mode = None
     __limit_source_address_cache = None
 
     # 最大TCP连接数量
@@ -35,7 +36,9 @@ class service(dispatcher.dispatcher):
     __cur_tcp_conns = 0
 
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
-                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None, limit_source_address=None,
+                  nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None,
+                  limit_source_address=None,
+                  use_limit_blacklist_mode=False,
                   max_tcp_conns=0
                   ):
         self.__cur_traffic_size = 0
@@ -43,6 +46,7 @@ class service(dispatcher.dispatcher):
         self.__begin_time = 0
 
         self.__limit_source_address = {}
+        self.__use_limit_blacklist_mode = use_limit_blacklist_mode
         self.__limit_source_address_cache = {}
 
         for addr, prefix, x_is_ipv6 in limit_source_address:
@@ -50,6 +54,7 @@ class service(dispatcher.dispatcher):
         # 限制的流量大小单位为GB
         self.__limit_traffic_size = limit_month_traffic * 1024 * 1024 * 1024
         if is_udp:
+
             s = "udp"
             self.__fpath = "%s_%s_relay_udp_traffic.json" % (bind[0], bind[1])
         else:
@@ -95,9 +100,14 @@ class service(dispatcher.dispatcher):
                 is_found = True
                 break
             ''''''
+        if self.__use_limit_blacklist_mode:
+            is_allowed = not is_found
+        else:
+            is_allowed = is_found
         # 加入到缓存中
-        self.__limit_source_address_cache[source_address] = (is_found, time.time(),)
-        return is_found
+        self.__limit_source_address_cache[source_address] = (is_allowed, time.time(),)
+
+        return is_allowed
 
     def traffic_statistics(self, traffic_size):
         self.__cur_traffic_size += traffic_size
@@ -199,6 +209,7 @@ def main():
     --bind=address,port --redirect=host,port -p tcp | udp [--tcp-redirect-slave=host,port][-6] [--nofork]  
     [--limit-month-traffic=XXX][--udp-heartbeat-file=FILE]
     [--limit-source-address-file=FILE]
+    [--limit-source-address-blacklist-mode]
     [--max-tcp-conns=conn_num]
     """
     try:
@@ -206,7 +217,7 @@ def main():
                                    [
                                        "nofork", "bind=", "redirect=", "help", "limit-month-traffic=",
                                        "udp-heartbeat-file=", "tcp-redirect-slave=", "limit-source-address-file=",
-                                       "max-tcp-conns="
+                                       "max-tcp-conns=", "limit-source-address-blacklist-mode"
                                    ])
     except getopt.GetoptError:
         print(help_doc)
@@ -235,6 +246,8 @@ def main():
     limit_source_address_file = None
 
     max_tcp_conns = 0
+    # 是否使用黑名单模式限制源地址
+    use_limit_blacklist_mode = False
 
     for k, v in opts:
         if k == "-6": force_ipv6 = True
@@ -249,6 +262,7 @@ def main():
         if k == "--udp-heartbeat-file": udp_heartbeat_file = v
         if k == "--tcp-redirect-slave": tcp_redirect_slave_s = v
         if k == "--limit-source-address-file": limit_source_address_file = v
+        if k == "--limit-source-address-blacklist-mode": use_limit_blacklist_mode = True
         if k == "--max-tcp-conns": max_tcp_conns = v
 
     try:
@@ -385,6 +399,7 @@ def main():
                         limit_month_traffic=limit_month_traffic,
                         nofork=nofork, udp_heartbeat_address=udp_heartbeat_address,
                         tcp_redirect_slave=tcp_redirect_slave, limit_source_address=limit_source_address,
+                        use_limit_blacklist_mode=use_limit_blacklist_mode,
                         max_tcp_conns=max_tcp_conns)
     except KeyboardInterrupt:
         instance.release()
