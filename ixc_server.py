@@ -313,16 +313,16 @@ class proxyd(dispatcher.dispatcher):
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
 
-        if use_nftables:
-            print("NOTE:use linux nftables")
-        else:
-            print("NOTE:use linux iptables/ip6tabls")
-
         if not debug:
             sys.stdout = open(LOG_FILE, "a+")
             sys.stderr = open(ERR_FILE, "a+")
 
             self.proxy.clog_set("/tmp/ixc_proxy_stdout.log", "/tmp/ixc_proxy_stderr.log")
+
+        if use_nftables:
+            logging.print_info("use linux nftables")
+        else:
+            logging.print_info("NOTE:use linux iptables/ip6tabls")
 
     def myloop(self):
         self.__access.access_loop()
