@@ -300,13 +300,13 @@ class proxyd(dispatcher.dispatcher):
         if dnsv6_addr != "::":
             self.__dns6_fileno = self.create_handler(-1, dns_proxy.dns_client, dnsv6_addr, is_ipv6=True)
 
-        enable_ipv66 = bool(int(nat_config["enable_nat66"]))
+        enable_nat66 = bool(int(nat_config["enable_nat66"]))
         subnet, prefix = netutils.parse_ip_with_prefix(nat_config["virtual_ip6_subnet"])
         eth_name = nat_config["eth_name"]
 
-        self.__enable_nat66 = enable_ipv66
+        self.__enable_nat66 = enable_nat66
 
-        if enable_ipv66:
+        if enable_nat66:
             self.__config_gateway6(subnet, prefix, eth_name)
             self.proxy.ipalloc_subnet_set(subnet, prefix, True)
 
@@ -526,14 +526,10 @@ class proxyd(dispatcher.dispatcher):
     def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
         if self.__use_nftables:
             if is_ipv6:
-                if self.__enable_nat66:
-                    cmd = "nft delete table ip6 ixcnat6"
-                else:
-                    cmd = ""
-                ''''''
+                cmd = "nft delete table ip6 ixcnat6"
             else:
                 cmd = "nft delete table ip ixcnat"
-            if cmd: subprocess.call(cmd, shell=True)
+            subprocess.call(cmd, shell=True)
             return
         while 1:
             line_numbers = []
@@ -574,8 +570,9 @@ class proxyd(dispatcher.dispatcher):
             self.delete_handler(self.__tcp_fileno)
 
         nat = self.__configs["nat"]
-        subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
-        self.__unconfig_gw(subnet, prefix, is_ipv6=True)
+        if self.__enable_nat66:
+            subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip6_subnet"])
+            self.__unconfig_gw(subnet, prefix, is_ipv6=True)
         subnet, prefix = netutils.parse_ip_with_prefix(nat["virtual_ip_subnet"])
         self.__unconfig_gw(subnet, prefix, is_ipv6=False)
 
