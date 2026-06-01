@@ -508,9 +508,9 @@ class proxyd(dispatcher.dispatcher):
             ]
         else:
             cmds += [
-                "nft add table ip ixcnat6",
-                "nft add chain ip ixcnat6 ch_snat '{type nat hook postrouting priority srcnat;}'",
-                "nft add rule ip ixcnat6 ch_snat oifname %s ip6 saddr %s/%s masquerade" % (eth_name, subnet, prefix,),
+                "nft add table ip6 ixcnat6",
+                "nft add chain ip6 ixcnat6 ch_snat '{type nat hook postrouting priority srcnat;}'",
+                "nft add rule ip6 ixcnat6 ch_snat oifname %s ip6 saddr %s/%s masquerade" % (eth_name, subnet, prefix,),
             ]
         for cmd in cmds: subprocess.call(cmd, shell=True)
 
