@@ -523,7 +523,9 @@ class proxyd(dispatcher.dispatcher):
 
     def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
         if self.__use_nftables:
-            cmds = ["nft delete table ip ixcnat", "nft delete table ip6 ixcnat6"]
+            cmds = ["nft delete table ip ixcnat", ]
+            if self.__enable_nat6:
+                cmds.append("nft delete table ip6 ixcnat6")
             for cmd in cmds: subprocess.call(cmd, shell=True)
             return
         while 1:
