@@ -591,7 +591,7 @@ def __start_service(debug):
     else:
         have_nftables = True
 
-    print("WARNING:iptables and ip6tables will be dropped on linux at future")
+    if not have_nftables: print("WARNING:iptables and ip6tables will be dropped on linux at future")
 
     if not debug and os.path.isfile(PID_FILE):
         print("the proxy server process exists")
