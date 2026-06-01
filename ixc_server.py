@@ -69,6 +69,8 @@ class proxyd(dispatcher.dispatcher):
 
     __proxy = None
 
+    __use_nftables = None
+
     @property
     def http_configs(self):
         configs = self.__configs.get("tunnel_over_http", {})
@@ -142,7 +144,9 @@ class proxyd(dispatcher.dispatcher):
             self.__host_match.add_rule((host, flags,))
         return
 
-    def init_func(self, debug, configs):
+    def init_func(self, debug, configs, use_nftables=False):
+        self.__use_nftables = use_nftables
+
         self.create_poll()
 
         self.__configs = configs
@@ -309,6 +313,11 @@ class proxyd(dispatcher.dispatcher):
 
         self.proxy.ipalloc_subnet_set(subnet, prefix, False)
 
+        if use_nftables:
+            print("NOTE:use linux nftables")
+        else:
+            print("NOTE:use linux iptables/ip6tabls")
+
         if not debug:
             sys.stdout = open(LOG_FILE, "a+")
             sys.stderr = open(ERR_FILE, "a+")
@@ -470,9 +479,19 @@ class proxyd(dispatcher.dispatcher):
         cmds = [
             "ip route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME),
             "echo 1 > /proc/sys/net/ipv4/ip_forward",
-            "iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,),
-            "iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix),
         ]
+        if not self.__use_nftables:
+            cmds += [
+                "iptables -t nat -A POSTROUTING -s %s/%s -o %s -j MASQUERADE" % (subnet, prefix, eth_name,),
+                "iptables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix),
+            ]
+        else:
+            cmds += [
+                "nft add table ip ixcnat",
+                "nft add chain ip ixcnat ch_snat '{type nat hook postrouting priority srcnat;}'",
+                "nft add rule ip ixcnat ch_snat oifname %s ip saddr %s/%s masquerade" % (eth_name, subnet, prefix,),
+            ]
+
         for cmd in cmds: subprocess.call(cmd, shell=True)
 
     def __config_gateway6(self, subnet, prefix, eth_name):
@@ -481,9 +500,18 @@ class proxyd(dispatcher.dispatcher):
         cmds = [
             "ip -6 route add %s/%s dev %s" % (subnet, prefix, self.__DEVNAME),
             "echo 1 >/proc/sys/net/ipv6/conf/all/forwarding",
-            "ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,),
-            "ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix)
         ]
+        if not self.__use_nftables:
+            cmds += [
+                "ip6tables -t nat -I POSTROUTING -s %s/%s  -j MASQUERADE" % (subnet, prefix,),
+                "ip6tables -A FORWARD -s %s/%s -j ACCEPT" % (subnet, prefix)
+            ]
+        else:
+            cmds += [
+                "nft add table ip ixcnat6",
+                "nft add chain ip ixcnat6 ch_snat '{type nat hook postrouting priority srcnat;}'",
+                "nft add rule ip ixcnat6 ch_snat oifname %s ip6 saddr %s/%s masquerade" % (eth_name, subnet, prefix,),
+            ]
         for cmd in cmds: subprocess.call(cmd, shell=True)
 
         # 检查IPv6网关是否存在,修改机器网络参数后,IPv6默认网关可能消失
@@ -494,6 +522,10 @@ class proxyd(dispatcher.dispatcher):
         ''''''
 
     def __unconfig_gw(self, subnet, prefix, is_ipv6=False):
+        if self.__use_nftables:
+            cmds = ["nft delete table ip ixcnat", "nft delete table ip6 ixcnat6"]
+            for cmd in cmds: subprocess.call(cmd, shell=True)
+            return
         while 1:
             line_numbers = []
             if is_ipv6:
@@ -546,12 +578,20 @@ class proxyd(dispatcher.dispatcher):
 
 
 def __start_service(debug):
-    if not os.path.isfile("/usr/sbin/iptables"):
-        print("ERROR:please install iptables")
-        return
-    if not os.path.isfile("/usr/sbin/ip6tables"):
-        print("ERROR:please install ip6tables")
-        return
+    have_nftables = False
+
+    if not os.path.isfile("/usr/sbin/nft"):
+        if not os.path.isfile("/usr/sbin/iptables"):
+            print("ERROR:please install iptables")
+            return
+        if not os.path.isfile("/usr/sbin/ip6tables"):
+            print("ERROR:please install ip6tables")
+            return
+        ''''''
+    else:
+        have_nftables = True
+
+    print("WARNING:iptables and ip6tables will be dropped on linux at future")
 
     if not debug and os.path.isfile(PID_FILE):
         print("the proxy server process exists")
@@ -572,10 +612,10 @@ def __start_service(debug):
     cls = proxyd()
 
     if debug:
-        cls.ioloop(debug, configs)
+        cls.ioloop(debug, configs, use_nftables=have_nftables)
         return
     try:
-        cls.ioloop(debug, configs)
+        cls.ioloop(debug, configs, use_nftables=have_nftables)
     except:
         logging.print_error()
 
