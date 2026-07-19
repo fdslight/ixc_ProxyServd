@@ -1,5 +1,4 @@
 #define  PY_SSIZE_T_CLEAN
-#define  PY_SSIZE_T_CLEAN
 
 #include<Python.h>
 #include<structmember.h>
@@ -93,6 +92,9 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
     inet_ntop(fa,daddr,dst_addr,512);
 
     arglist=Py_BuildValue("(y#ssHHNNy#)",id,16,src_addr,dst_addr,sport,dport, PyBool_FromLong(is_udplite), PyBool_FromLong(is_ipv6),data,size);
+    if(NULL==arglist){
+        return -1;
+    }
     result=PyObject_CallObject(udp_recv_cb,arglist);
  
     Py_XDECREF(arglist);
