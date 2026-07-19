@@ -96,6 +96,7 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
         STDERR("cannot call udp_recv_cb function\r\n");
         return -1;
     }
+    
     result=PyObject_CallObject(udp_recv_cb,arglist);
  
     Py_XDECREF(arglist);
