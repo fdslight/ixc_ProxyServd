@@ -657,6 +657,7 @@ def main():
     -d      debug | start | stop    debug,start or stop application
     -u      user_configs            update configs         
     """
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "u:m:d:", [])
     except getopt.GetoptError:
