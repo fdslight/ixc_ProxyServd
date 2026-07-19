@@ -74,7 +74,7 @@ int netpkt_send(struct mbuf *m)
 
 int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,unsigned short sport,unsigned short dport,int is_udplite,int is_ipv6,void *data,int size)
 {
-    PyObject *arglist,*result;
+    PyObject *arglist=NULL,*result=NULL;
     char src_addr[512],dst_addr[512];
     int fa;
 
