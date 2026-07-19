@@ -91,12 +91,12 @@ int netpkt_udp_recv(unsigned char *id,unsigned char *saddr,unsigned char *daddr,
     inet_ntop(fa,saddr,src_addr,512);
     inet_ntop(fa,daddr,dst_addr,512);
 
-    arglist=Py_BuildValue("(y#ssHHNNy#)",id,16,src_addr,dst_addr,sport,dport, PyBool_FromLong(is_udplite), PyBool_FromLong(is_ipv6),data,size);
+    arglist=Py_BuildValue("(y#ssHHNNy#)",id,(Py_ssize_t)16,src_addr,dst_addr,sport,dport, PyBool_FromLong(is_udplite), PyBool_FromLong(is_ipv6),data,(Py_ssize_t)size);
     if(NULL==arglist){
         STDERR("cannot call udp_recv_cb function\r\n");
         return -1;
     }
-    
+
     result=PyObject_CallObject(udp_recv_cb,arglist);
  
     Py_XDECREF(arglist);
