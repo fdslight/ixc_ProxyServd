@@ -36,7 +36,12 @@ class tundev(handler.handler):
             self.dispatcher.handle_ippkt_from_tundev(read_data)
 
     def evt_write(self):
-        if not self.__sent: self.remove_evt_write(self.fileno)
+        if not self.__sent:
+            self.remove_evt_write(self.fileno)
+            return
+        self.__write()
+
+    def __write(self):
         while 1:
             try:
                 write_data = self.__sent.pop(0)
@@ -47,6 +52,7 @@ class tundev(handler.handler):
             except BlockingIOError:
                 self.__sent.insert(0, write_data)
             ''''''
+        return
 
     def error(self):
         pass
@@ -57,4 +63,5 @@ class tundev(handler.handler):
 
     def send_msg(self, message: bytes):
         self.__sent.append(message)
-        self.add_evt_write(self.fileno)
+        self.__write()
+        if self.__sent: self.add_evt_write(self.fileno)
