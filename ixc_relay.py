@@ -99,8 +99,10 @@ class service(dispatcher.dispatcher):
             if subnet in self.__limit_source_address:
                 # 找到地址段后检查前缀是否一致
                 v = self.__limit_source_address[subnet]
-                if v[0] == n: is_found = True
-                break
+                if v[0] == n:
+                    is_found = True
+                    break
+                ''''''
             ''''''
         if self.__use_limit_blacklist_mode:
             is_allowed = not is_found
