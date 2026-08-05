@@ -97,7 +97,9 @@ class service(dispatcher.dispatcher):
             n = i + 1
             subnet = netutils.calc_subnet(source_address, n, is_ipv6=is_ipv6)
             if subnet in self.__limit_source_address:
-                is_found = True
+                # 找到地址段后检查前缀是否一致
+                v = self.__limit_source_address[subnet]
+                if v[0] == n: is_found = True
                 break
             ''''''
         if self.__use_limit_blacklist_mode:
