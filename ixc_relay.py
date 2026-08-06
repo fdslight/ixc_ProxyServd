@@ -53,7 +53,8 @@ class service(dispatcher.dispatcher):
         self.__limit_source_address = {}
         self.__use_limit_blacklist_mode = use_limit_blacklist_mode
         self.__limit_source_address_cache = {}
-        self.__stdout_buf_size = 1024
+        # 最大日志文件大小
+        self.__stdout_buf_size = 2 * 1024 * 1024
         self.__is_daemon = not nofork
 
         for addr, prefix, x_is_ipv6 in limit_source_address:
