@@ -35,6 +35,11 @@ class service(dispatcher.dispatcher):
     # 当前tcp连接数量
     __cur_tcp_conns = 0
 
+    # 正常日志缓冲区大小,单位字节
+    __stdout_buf_size = 0
+    __is_daemon = None
+    __stdout_fpath = None
+
     def init_func(self, bind, redirect, is_udp=False, is_ipv6=False, force_ipv6=False, limit_month_traffic=0,
                   nofork=False, udp_heartbeat_address=None, tcp_redirect_slave=None,
                   limit_source_address=None,
@@ -48,6 +53,8 @@ class service(dispatcher.dispatcher):
         self.__limit_source_address = {}
         self.__use_limit_blacklist_mode = use_limit_blacklist_mode
         self.__limit_source_address_cache = {}
+        self.__stdout_buf_size = 1024
+        self.__is_daemon = not nofork
 
         for addr, prefix, x_is_ipv6 in limit_source_address:
             self.__limit_source_address[addr] = (prefix, x_is_ipv6,)
@@ -62,9 +69,11 @@ class service(dispatcher.dispatcher):
             self.__fpath = "%s_%s_relay_tcp_traffic.json" % (bind[0], bind[1])
 
         if not nofork:
-            sys.stdout = open("/tmp/ixc_relay_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
-            sys.stderr = open("/tmp/ixc_relay_err_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
+            stdout_fpath = "/tmp/ixc_relay_%s_%s_%s.log" % (s, bind[0], bind[1])
+            self.__stdout_fpath = stdout_fpath
 
+            sys.stdout = open(stdout_fpath, "w")
+            sys.stderr = open("/tmp/ixc_relay_err_%s_%s_%s.log" % (s, bind[0], bind[1]), "w")
         self.load_traffic_statistics()
 
         self.__listen_fd = -1
@@ -196,6 +205,13 @@ class service(dispatcher.dispatcher):
             self.flush_traffic_statistics()
             self.reset_traffic()
             self.clear_source_addr_limit_cache()
+            # 检查日志文件是否超出范围
+            if self.__is_daemon:
+                st_size = os.stat(self.__stdout_fpath).st_size
+                # 重置文件位置
+                if st_size >= self.__stdout_buf_size:
+                    sys.stdout.seek(0)
+                ''''''
             self.__up_time = now
         ''''''
 
