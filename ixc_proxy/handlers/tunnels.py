@@ -426,6 +426,11 @@ class udp_tunnel(udp_handler.udp_handler):
         self.close()
 
     def send_msg(self, session_id, address, action, message):
+        # 只对DNS报文进行数据压缩
+        if action == proto_utils.ACT_DNS:
+            message = zlib.compress(message)
+            action = proto_utils.ACT_ZLIB_DNS
+        """
         # 尝试压缩数据,查看数据能否被压缩,如果被压缩那么使用压缩后的数据
         if action == proto_utils.ACT_DNS or action == proto_utils.ACT_IPDATA:
             length = len(message)
@@ -438,6 +443,7 @@ class udp_tunnel(udp_handler.udp_handler):
                     action = proto_utils.ACT_ZLIB_IPDATA
                 message = new_msg
             ''''''
+        """
         ippkts = self.__encrypt.build_packets(session_id, action, message)
         self.__encrypt.reset()
 
