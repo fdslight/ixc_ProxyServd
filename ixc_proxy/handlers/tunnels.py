@@ -204,6 +204,12 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
         if self.__over_http and not self.__http_handshake_ok: return
 
         if self.__enable_zlib:
+            # 只对DNS响应进行压缩,DNS响应为文本,基本可压缩,否则需要判断压缩大小情况,浪费CPU资源
+            # 并且强制压缩会导致带宽增加
+            if action == proto_utils.ACT_DNS:
+                message = zlib.compress(message)
+                action = proto_utils.ACT_ZLIB_DNS
+            """
             if action in (proto_utils.ACT_IPDATA, proto_utils.ACT_DNS,):
                 length = len(message)
                 new_msg = zlib.compress(message)
@@ -215,6 +221,7 @@ class _tcp_tunnel_handler(tcp_handler.tcp_handler):
                         action = proto_utils.ACT_ZLIB_IPDATA
                     message = new_msg
                 ''''''
+            """
             ''''''
         if self.__isset_http_session_id:
             sent_pkt = self.__encrypt.build_packet(action, message)
