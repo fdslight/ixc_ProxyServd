@@ -3,6 +3,7 @@ import time, socket
 
 import pywind.evtframework.handlers.tcp_handler as tcp_handler
 import pywind.evtframework.handlers.udp_handler as udp_handler
+import pywind.lib.netutils as netutils
 import ixc_proxy.lib.logging as logging
 
 TIMEOUT = 70
@@ -76,8 +77,15 @@ class tcp_listener(tcp_handler.tcp_handler):
             else:
                 redirect_address = self.__redirect_address
 
+            # 如果是域名那么使用默认设置
+            redirect_is_ipv6 = False
+            if not netutils.is_ipv4_address(redirect_address[0]) and not netutils.is_ipv6_address(redirect_address[0]):
+                redirect_is_ipv6 = self.__redirect_is_ipv6
+            if netutils.is_ipv6_address(redirect_address[0]):
+                redirect_is_ipv6 = True
+
             self.create_handler(self.fileno, redirect_tcp_handler, cs, caddr, redirect_address,
-                                is_ipv6=self.__redirect_is_ipv6, is_master=is_master)
+                                is_ipv6=redirect_is_ipv6, is_master=is_master)
             ''''''
         ''''''
 
