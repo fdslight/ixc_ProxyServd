@@ -3,20 +3,6 @@ import os, sys, sysconfig
 
 import pywind.lib.sys_build as sys_build
 
-
-def find_python_include_path():
-    files = os.listdir("/usr/include")
-    result = ""
-
-    for f in files:
-        p = f.find("python3")
-        if p < 0: continue
-        result = "/usr/include/%s" % f
-        break
-
-    return result
-
-
 def build(cflags):
     files = sys_build.get_c_files("ixc_proxy/lib/clib")
     files += sys_build.get_c_files("pywind/clib")
