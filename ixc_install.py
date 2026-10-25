@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys
+import os, sys, sysconfig
 
 import pywind.lib.sys_build as sys_build
 
@@ -56,7 +56,8 @@ def main():
         print(help_doc)
         return
 
-    if not python3_include: python3_include = find_python_include_path()
+    if not python3_include:
+        python3_include = sysconfig.get_path("include")
 
     if not os.path.isdir(python3_include):
         print("ERROR:not found python3 header file %s" % python3_include)
