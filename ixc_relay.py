@@ -127,7 +127,7 @@ class service(dispatcher.dispatcher):
         self.__cur_traffic_size += traffic_size
 
     def have_traffic(self):
-        """是否还有流量
+        """是否还有流量s
         """
         if self.__limit_traffic_size <= 0: return True
         if self.__cur_traffic_size >= self.__limit_traffic_size: return False
@@ -211,7 +211,8 @@ class service(dispatcher.dispatcher):
                 st_size = os.stat(self.__stdout_fpath).st_size
                 # 重置文件位置
                 if st_size >= self.__stdout_buf_size:
-                    sys.stdout.seek(0)
+                    # 标准stdout不支持seek,文件可以,因此需要判断
+                    if sys.stdout.seekable(): sys.stdout.seek(0)
                 ''''''
             self.__up_time = now
         ''''''
