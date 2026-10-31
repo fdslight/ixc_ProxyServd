@@ -206,15 +206,15 @@ class service(dispatcher.dispatcher):
             self.flush_traffic_statistics()
             self.reset_traffic()
             self.clear_source_addr_limit_cache()
-            # 检查日志文件是否超出范围
-            if self.__is_daemon:
-                st_size = os.stat(self.__stdout_fpath).st_size
-                # 重置文件位置
-                if st_size >= self.__stdout_buf_size:
-                    # 标准stdout不支持seek,文件可以,因此需要判断
-                    if sys.stdout.seekable(): sys.stdout.seek(0)
-                ''''''
             self.__up_time = now
+
+        # 检查日志文件是否超出范围
+        if self.__is_daemon:
+            # 重置文件位置
+            seek=sys.stdout.tell()
+            if seek >= self.__stdout_buf_size:
+                sys.stdout.seek(0)
+            ''''''
         ''''''
 
     def release(self):
